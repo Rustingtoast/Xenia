@@ -64,6 +64,7 @@ Open http://localhost:3000.
 | `mise run dev`       | Start Rails + Tailwind watcher on http://localhost:3000            |
 | `mise run dev:lan`   | Same, but reachable from your phone on the same Wi-Fi (see below)  |
 | `mise run test`      | Run the test suite                                                 |
+| `mise run test:system` | Run browser tests in headless Chrome (needs Chrome installed)    |
 | `mise run lint`      | Run RuboCop (style) and Brakeman (security)                        |
 | `mise run setup`     | Re-run setup after pulling changes (`-- --skip-server` to not start the server) |
 | `mise tasks`         | List all tasks                                                     |
