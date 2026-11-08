@@ -26,3 +26,15 @@ run = "bin/rails db:test:prepare test:system"
 [tasks.lint]
 description = "Run RuboCop and Brakeman"
 run = ["bin/rubocop", "bin/brakeman --no-pager -q"]
+
+[tasks."db:setup"]
+description = "Create and migrate the database; a new dev database also gets sample contacts (safe to rerun)"
+run = "bin/rails db:prepare"
+
+[tasks."db:seed"]
+description = "Add the sample contacts to the dev database (skips ones that already exist)"
+run = "bin/rails db:seed"
+
+[tasks."db:reset"]
+description = "DELETES the dev database, recreates it from db/schema.rb and loads the sample contacts"
+run = "bin/rails db:reset"

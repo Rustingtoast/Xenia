@@ -10,5 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 0) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_08_135547) do
+  create_table "contacts", force: :cascade do |t|
+    t.string "group_name", null: false
+    t.string "location", null: false
+    t.string "phone_number", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["group_name"], name: "index_contacts_on_group_name"
+    t.index ["location"], name: "index_contacts_on_location"
+  end
 end
