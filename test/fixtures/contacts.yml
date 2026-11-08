@@ -1,0 +1,9 @@
+family_zurich:
+  group_name: Family
+  location: Zurich
+  phone_number: +1 555-0101
+
+work_bern:
+  group_name: Work
+  location: Bern
+  phone_number: (555) 010-0113
