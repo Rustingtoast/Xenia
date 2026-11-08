@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+@plugin 'daisyui' {
+	themes:
+		light --default,
+		dark --prefersdark;
+}
+
+/* Height of one contact row in the list (ContactRow.svelte). Lazy-loading placeholders reserve
+   rows × this, so keep it in sync with the real row height on phones and on wider screens. */
+:root {
+	--contact-row-height: 4.8125rem; /* 77px, measured */
+	@media (width >= 48rem) {
+		--contact-row-height: 3.5625rem; /* 57px, measured */
+	}
+}

@@ -1,40 +1,39 @@
 [tools]
-# Keep in sync with .ruby-version (used by CI) and RUBY_VERSION in the Dockerfile.
-ruby = "4.0.9"
+# CI installs the same version from this file (jdx/mise-action).
+bun = "1.4.4"
 
 [tasks.setup]
-description = "Install gems, prepare the database and start the dev server (add -- --skip-server to only set up)"
-run = "bin/setup"
+description = "Install packages, create/migrate the dev database and load the sample contacts"
+run = ["bun install", "bun run db:setup", "bun run db:seed"]
 
 [tasks.dev]
-description = "Start Rails + Tailwind watcher on http://localhost:3000"
-run = "bin/dev"
+description = "Start the dev server on http://localhost:5173"
+run = "bun run dev"
 
 [tasks."dev:lan"]
 description = "Start the dev server reachable from phones on the same network"
-env = { BINDING = "0.0.0.0" }
-run = "bin/dev"
+run = "bun run dev:lan"
 
 [tasks.test]
-description = "Run the test suite (same command as CI)"
-run = "bin/rails db:test:prepare test"
+description = "Run the unit tests (same command as CI)"
+run = "bun run test"
 
-[tasks."test:system"]
-description = "Run browser-based system tests in headless Firefox (same command as CI)"
-run = "bin/rails db:test:prepare test:system"
+[tasks."test:e2e"]
+description = "Run the browser tests in headless Firefox (same command as CI)"
+run = "bun run test:e2e"
 
-[tasks.lint]
-description = "Run RuboCop and Brakeman"
-run = ["bin/rubocop", "bin/brakeman --no-pager -q"]
+[tasks.check]
+description = "Type-check the app (svelte-check)"
+run = "bun run check"
 
 [tasks."db:setup"]
-description = "Create and migrate the database; a new dev database also gets sample contacts (safe to rerun)"
-run = "bin/rails db:prepare"
+description = "Create and migrate the dev database (safe to rerun)"
+run = "bun run db:setup"
 
 [tasks."db:seed"]
 description = "Add the sample contacts to the dev database (skips ones that already exist)"
-run = "bin/rails db:seed"
+run = "bun run db:seed"
 
 [tasks."db:reset"]
-description = "DELETES the dev database, recreates it from db/schema.rb and loads the sample contacts"
-run = "bin/rails db:reset"
+description = "DELETES the dev database, recreates it and loads the sample contacts"
+run = "bun run db:reset"
