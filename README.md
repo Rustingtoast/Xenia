@@ -5,16 +5,32 @@ A web app usable from both desktop and phone browsers.
 
 ## Stack
 
-- Ruby 4.0.9, managed with [mise](https://mise.jdx.dev)
-- Rails 8.1 (server-rendered HTML with Hotwire: Turbo + Stimulus via importmap)
-- Tailwind CSS v4, mobile-first (unprefixed classes = phone, `md:`/`lg:` = larger screens)
-- SQLite (database files live in `storage/`), Solid Cache / Queue / Cable
+- [Bun](https://bun.sh) 1.4 (runtime, package manager, unit tests), managed with [mise](https://mise.jdx.dev)
+- [SvelteKit](https://svelte.dev/docs/kit) 3 with Svelte 5, TypeScript, built as a standalone Bun server (`@sveltejs/adapter-bun`)
+- SQLite through Bun's built-in `bun:sqlite` (plain SQL, migrations in `src/lib/server/migrations.ts`)
+- Tailwind CSS v4 + [daisyUI](https://daisyui.com) 5, mobile-first (unprefixed classes = phone, `md:`/`lg:` = larger screens)
+- Playwright for browser tests, in headless Firefox
 
 ## Getting started
 
+### Quick way: one script
+
+On macOS or Linux (also a Raspberry Pi with 64-bit OS), this installs everything: mise, Bun, the packages,
+and a dev database with sample contacts. Safe to run again.
+
+```sh
+git clone https://github.com/Rustingtoast/Xenia.git
+cd Xenia
+scripts/install.sh                    # add --no-sample-data for an empty database (real installations)
+                                      # add --with-browsers to also get Firefox for the browser tests
+mise run dev                          # http://localhost:5173
+```
+
+Or do the same by hand:
+
 ### 1. Install mise
 
-mise installs and switches the right Ruby version for this project automatically.
+mise installs the right Bun version for this project automatically.
 
 ```sh
 # macOS (Homebrew)
@@ -24,8 +40,7 @@ brew install mise
 curl https://mise.run | sh
 ```
 
-Then hook it into your shell so the project's Ruby is used whenever you `cd` into it
-(restart the terminal afterwards):
+Then hook it into your shell (restart the terminal afterwards):
 
 ```sh
 # zsh (macOS default)
@@ -37,49 +52,62 @@ echo 'eval "$(mise activate bash)"' >> ~/.bashrc
 
 Other shells and Windows: see the [mise getting started guide](https://mise.jdx.dev/getting-started.html).
 
-> If you also use rbenv/rvm/asdf, make sure mise's activation line comes **after** theirs
-> in your shell config, otherwise their Ruby may win. Check with `which ruby` inside the project.
-
 ### 2. Clone and set up the project
 
 ```sh
 git clone https://github.com/Rustingtoast/Xenia.git
 cd Xenia
 mise trust          # allow mise to use this project's mise.toml (one time)
-mise install        # installs Ruby 4.0.9
-mise run setup      # installs gems, prepares the database, starts the dev server
+mise install        # installs Bun
+mise run setup      # installs packages, creates the dev database, loads 25 sample contacts
+mise run dev        # http://localhost:5173
 ```
-
-Open http://localhost:3000.
-
-> `mise install` may compile Ruby from source, which needs a C compiler and a few libraries
-> (on macOS: Xcode Command Line Tools + `brew install openssl libyaml`). See the
-> [ruby-build build environment](https://github.com/rbenv/ruby-build/wiki#suggested-build-environment)
-> if the install fails.
 
 ## Everyday commands
 
-| Command              | What it does                                                       |
-| -------------------- | ------------------------------------------------------------------ |
-| `mise run dev`       | Start Rails + Tailwind watcher on http://localhost:3000            |
-| `mise run dev:lan`   | Same, but reachable from your phone on the same Wi-Fi (see below)  |
-| `mise run test`      | Run the test suite                                                 |
-| `mise run test:system` | Run browser tests in headless Firefox (needs Firefox installed)  |
-| `mise run lint`      | Run RuboCop (style) and Brakeman (security)                        |
-| `mise run setup`     | Re-run setup after pulling changes (`-- --skip-server` to not start the server) |
-| `mise tasks`         | List all tasks                                                     |
+| Command                | What it does                                                          |
+| ---------------------- | --------------------------------------------------------------------- |
+| `mise run dev`         | Start the dev server on http://localhost:5173                         |
+| `mise run dev:lan`     | Same, but reachable from your phone on the same Wi-Fi (see below)     |
+| `mise run test`        | Run the unit tests (`bun test`)                                       |
+| `mise run test:e2e`    | Run the browser tests in headless Firefox (builds the app first)      |
+| `mise run check`       | Type-check everything (`svelte-check`)                                |
+| `mise run setup`       | Re-run setup after pulling changes                                    |
+| `mise run db:setup`    | Create / migrate the dev database                                     |
+| `mise run db:seed`     | Add the sample contacts (skips ones that exist)                       |
+| `mise run db:reset`    | **Delete** the dev database, recreate it and load the sample contacts |
+| `mise tasks`           | List all tasks                                                        |
 
-The tasks are thin wrappers around the standard Rails scripts in `bin/` (`bin/dev`,
-`bin/setup`, `bin/rails test`, ...), which also work directly.
+The tasks are thin wrappers around the `package.json` scripts, which also work directly (`bun run dev`, ...).
+
+The first `mise run test:e2e` needs Playwright's Firefox: `bunx playwright install firefox`.
 
 ### Testing on a phone
 
 Run `mise run dev:lan`, find your computer's local IP
 (macOS: `ipconfig getifaddr en0`, Linux: `hostname -I`) and open
-`http://<that-ip>:3000` in the phone's browser. Both devices must be on the same network.
+`http://<that-ip>:5173` in the phone's browser. Both devices must be on the same network.
 
-## Upgrading Ruby
+## Running in production
 
-The Ruby version is set in three places that must stay in sync:
-`mise.toml`, `.ruby-version` (used by CI) and `RUBY_VERSION` in the `Dockerfile`.
-After changing them, run `mise install` and `bundle install`.
+```sh
+XENIA_ORIGIN=http://<host>:3000 bun run build   # once per release
+XENIA_SECRET=<secret> DATABASE_PATH=storage/xenia.sqlite3 PORT=3000 bun ./build
+```
+
+- `XENIA_ORIGIN` (build time): the URL people open the app at. Needed for plain `http://`, otherwise
+  form posts (delete, undo) are rejected as cross-site.
+- `XENIA_SECRET`: a long random string, e.g. `openssl rand -hex 32`. Keep it the same across restarts.
+- `DATABASE_PATH`: the SQLite file. It is created and migrated on start. Back it up by copying it.
+
+## Project layout
+
+| Path                       | What's there                                                   |
+| -------------------------- | -------------------------------------------------------------- |
+| `src/routes/`              | Pages, form actions and JSON endpoints                         |
+| `src/lib/components/`      | Svelte components (Group list, group sections, rows, theme toggle) |
+| `src/lib/server/`          | Server-only code: database, migrations, contact queries, undo  |
+| `src/lib/contacts.ts`      | Contact types and rules shared by server and browser           |
+| `scripts/db.ts`            | The `db:*` commands and the sample contacts                    |
+| `e2e/`                     | Playwright browser tests                                       |
+| `storage/`                 | SQLite databases (git-ignored)                                 |

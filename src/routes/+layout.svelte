@@ -1,0 +1,64 @@
+<script lang="ts">
+	import '../app.css';
+	import { page } from '$app/state';
+	import { MediaQuery } from 'svelte/reactivity';
+	import GroupList from '#lib/components/GroupList.svelte';
+	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import type { GroupCount } from '#lib/contacts.js';
+	import { DOCKED_QUERY, GroupListMode } from '#lib/group-list.js';
+	import type { LayoutProps } from './$types';
+
+	let { children }: LayoutProps = $props();
+
+	/** Pages that show contacts provide their groups; only those get the Group list. */
+	const groups = $derived(page.data.groups as GroupCount[] | undefined);
+
+	let groupListMode = $state<GroupListMode>(GroupListMode.Auto);
+	const docked = new MediaQuery(DOCKED_QUERY, false);
+	const groupListShown = $derived(
+		groupListMode === GroupListMode.Open || (groupListMode === GroupListMode.Auto && docked.current)
+	);
+
+	function toggleGroupList() {
+		if (groupListShown) closeGroupList();
+		else groupListMode = docked.current ? GroupListMode.Auto : GroupListMode.Open;
+	}
+
+	function closeGroupList() {
+		// Smaller screens fall back to Auto (= hidden there), so the drawer doesn't cover the page after a resize.
+		groupListMode = docked.current ? GroupListMode.Closed : GroupListMode.Auto;
+	}
+</script>
+
+<!-- Sticky, so the docked Group list (which starts below it) always lines up with it. -->
+<header class="navbar sticky top-0 z-20 min-h-16 gap-1 bg-base-100 shadow-sm">
+	{#if groups}
+		<button
+			type="button"
+			class="btn btn-square btn-ghost"
+			aria-label={groupListShown ? 'Close group list' : 'Open group list'}
+			title={groupListShown ? 'Close group list' : 'Open group list'}
+			aria-controls="group-list"
+			aria-expanded={groupListShown}
+			onclick={toggleGroupList}
+		>
+			<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+				stroke-width="2" stroke-linecap="round" aria-hidden="true">
+				<path d="M4 6h16M4 12h16M4 18h16"></path>
+			</svg>
+		</button>
+	{/if}
+	<div class="flex-1">
+		<a href="/" class="btn btn-ghost text-xl">Xenia</a>
+	</div>
+	<ThemeToggle />
+</header>
+
+{#if groups}
+	<GroupList {groups} mode={groupListMode} onclose={closeGroupList} />
+{/if}
+
+<!-- Always centered on the full width: the Group list lies on top and never moves it. -->
+<main class="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
+	{@render children()}
+</main>

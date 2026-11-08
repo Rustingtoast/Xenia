@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@plugin 'daisyui' {
+	themes:
+		light --default,
+		dark --prefersdark;
+}
+
+/* `docked:` = wide enough for the Group list to sit beside the centered contacts (see src/lib/group-list.ts). */
+@theme {
+	--breakpoint-docked: 86rem;
+}
+
+/* The sticky search bar on the list page (input 2.5rem + py-2), measured. Group headings stick right below
+   it (top bar 4rem + this), and jumping to a group stops there too (GroupSection.svelte). */
+:root {
+	--search-bar-height: 3.5rem;
+	--list-sticky-top: calc(4rem + var(--search-bar-height));
+}
+
+/* Height of one contact row in the list (ContactRow.svelte). Lazy-loading placeholders reserve
+   rows × this, so keep it in sync with the real row height on phones and on wider screens. */
+:root {
+	--contact-row-height: 6.0625rem; /* 97px, measured (3 lines: number, location, description) */
+	@media (width >= 48rem) {
+		--contact-row-height: 3.5625rem; /* 57px, measured */
+	}
+}
+
+/* Soft banners (daisyUI `alert alert-soft alert-*`): daisyUI colours their text with the plain alert colour,
+   which is hard to read in light mode (yellow/green text ≈ 1.7–1.9:1). Mixing it with the normal text colour
+   keeps the hue but makes it readable in every variant and both themes (≈ 5.5:1 light, ≈ 7:1 dark).
+   Unlayered CSS, so it wins over daisyUI's layered styles without !important. */
+.alert-soft {
+	color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 45%, var(--color-base-content));
+}
+
+/* Success banners ("Contact deleted." / "Contact restored."): a brighter green than daisyUI's 8% tint. */
+.alert-soft.alert-success {
+	background: color-mix(in oklab, var(--color-success) 25%, transparent);
+	--alert-border-color: color-mix(in oklab, var(--color-success) 40%, transparent);
+}
+
+/* Green buttons on a green banner (the Undo button): an edge in the text colour mixed with green, so the button
+   stands out from the banner in light mode too (WCAG 1.4.11 asks 3:1 for a control's boundary). */
+.alert-soft.alert-success .btn-success {
+	border-color: color-mix(in oklab, var(--color-success) 45%, var(--color-base-content));
+}
