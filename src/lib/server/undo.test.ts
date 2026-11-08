@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 test('a deleted contact can be restored from its undo token, with the same id and data', async () => {
-	const original = addContact(db, { groupName: 'Family', location: 'Zurich', phoneNumber: '+1 555-0101' });
+	const original = addContact(db, { groupName: 'Family', location: 'Zurich', phoneNumber: '+1 555-0101', description: 'Mum' });
 	const token = await createUndoToken(original, SECRET);
 	deleteContact(db, original.id);
 
@@ -22,7 +22,7 @@ test('a deleted contact can be restored from its undo token, with the same id an
 		groupName: 'Family',
 		location: 'Zurich',
 		phoneNumber: '+1 555-0101',
-		indexLetter: 'F',
+		description: 'Mum',
 		createdAt: original.createdAt
 	});
 	expect(findContact(db, original.id)).not.toBeNull();

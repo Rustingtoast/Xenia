@@ -6,10 +6,22 @@
 		dark --prefersdark;
 }
 
+/* `docked:` = wide enough for the Group list to sit beside the centered contacts (see src/lib/group-list.ts). */
+@theme {
+	--breakpoint-docked: 86rem;
+}
+
+/* The sticky search bar on the list page (input 2.5rem + py-2), measured. Group headings stick right below
+   it (top bar 4rem + this), and jumping to a group stops there too (GroupSection.svelte). */
+:root {
+	--search-bar-height: 3.5rem;
+	--list-sticky-top: calc(4rem + var(--search-bar-height));
+}
+
 /* Height of one contact row in the list (ContactRow.svelte). Lazy-loading placeholders reserve
    rows × this, so keep it in sync with the real row height on phones and on wider screens. */
 :root {
-	--contact-row-height: 4.8125rem; /* 77px, measured */
+	--contact-row-height: 6.0625rem; /* 97px, measured (3 lines: number, location, description) */
 	@media (width >= 48rem) {
 		--contact-row-height: 3.5625rem; /* 57px, measured */
 	}

@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { ActionOutcome } from '#lib/contacts.js';
-	import LetterSection from '#lib/components/LetterSection.svelte';
-	import SideIndex from '#lib/components/SideIndex.svelte';
+	import { ActionOutcome, groupKey } from '#lib/contacts.js';
+	import GroupSection from '#lib/components/GroupSection.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	/** The mounted letter sections, to remove/reload rows after delete and undo. */
-	const sections: Record<string, LetterSection> = {};
+	/** The mounted group sections by groupKey, to remove/reload rows after delete and undo. */
+	const sections: Record<string, GroupSection> = $state({});
 
-	const letters = $derived(new Set(data.letterCounts.map(([letter]) => letter)));
-	const firstLetter = $derived(data.letterCounts[0]?.[0]);
+	const groupKeys = $derived(new Set(data.groups.map((group) => groupKey(group.name))));
 	const outcome = $derived(form?.outcome);
 </script>
 
@@ -19,9 +17,9 @@
 	<title>Phonebook · Xenia</title>
 </svelte:head>
 
-<!-- Right margin keeps everything clear of the fixed side index. -->
-<div class="mr-6 md:mr-8">
-	<div class="mb-4 flex items-center justify-between gap-3">
+<!-- Phone layout: a centered, phone-wide column (36rem), also on wider windows below md. md+: full width. -->
+<div class="mx-auto max-w-xl md:max-w-none">
+	<div class="mb-2 flex items-center justify-between gap-3">
 		<div>
 			<h1 class="text-2xl font-bold">Phonebook</h1>
 			<p id="contact-count" class="text-sm text-base-content/60">
@@ -33,16 +31,6 @@
 		<button type="button" class="btn btn-primary" disabled>+ New</button>
 	</div>
 
-	<!-- Mock: search and filters arrive with issue #7. Read-only (not disabled) so it stays clearly visible. -->
-	<label class="input mb-4 w-full border-base-content/20 bg-base-100">
-		<svg class="h-5 w-5 opacity-60" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-			stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-			<circle cx="11" cy="11" r="7"></circle>
-			<path d="m20 20-3.5-3.5"></path>
-		</svg>
-		<input type="search" placeholder="Search group, location or number" aria-label="Search contacts" readonly />
-	</label>
-
 	{#if form?.outcome === ActionOutcome.Deleted}
 		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
 			<span>Contact deleted.</span>
@@ -51,15 +39,14 @@
 				action="?/restore"
 				use:enhance={() => {
 					return async ({ result, update }) => {
-						const hadSection = (letter: string) => letter in sections && letters.has(letter);
-						const restoredLetter =
+						const restoredGroup =
 							result.type === 'success' && result.data?.outcome === ActionOutcome.Restored
-								? (result.data.restored as { letter: string }).letter
+								? groupKey((result.data.restored as { groupName: string }).groupName)
 								: undefined;
-						const reloadSection = restoredLetter !== undefined && hadSection(restoredLetter);
+						const reloadSection = restoredGroup !== undefined && groupKeys.has(restoredGroup);
 						await update();
 						// A new section loads itself; an existing one reloads so the contact reappears in its place.
-						if (reloadSection) sections[restoredLetter].reload();
+						if (reloadSection) sections[restoredGroup].reload();
 					};
 				}}
 			>
@@ -73,19 +60,31 @@
 		<div role="alert" class="mb-4 alert alert-soft alert-warning">This contact can no longer be restored.</div>
 	{/if}
 
-	{#if data.letterCounts.length === 0}
+	<!-- Always visible: sticks below the top bar while the list scrolls under it.
+	     Mock: search and filters arrive with issue #7. Read-only (not disabled) so it stays clearly visible.
+	     Its height (with padding) is --search-bar-height in app.css; group headings stick right below it. -->
+	<div class="sticky top-16 z-20 -mx-1 bg-base-200 px-1 py-2">
+		<label class="input w-full border-base-content/20 bg-base-100">
+			<svg class="h-5 w-5 opacity-60" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+				stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+				<circle cx="11" cy="11" r="7"></circle>
+				<path d="m20 20-3.5-3.5"></path>
+			</svg>
+			<input type="search" placeholder="Search contacts" aria-label="Search contacts" readonly />
+		</label>
+	</div>
+
+	{#if data.groups.length === 0}
 		<div class="rounded-box bg-base-100 p-10 text-center text-base-content/60 shadow-sm">No contacts yet.</div>
 	{:else}
-		<SideIndex {letters} />
-
 		<!-- No overflow clipping on this box: the row option menus must be able to stick out of it. -->
 		<div class="rounded-box bg-base-100 shadow-sm">
-			<div class="hidden grid-cols-[1fr_1fr_1fr_2rem] gap-4 border-b border-base-content/10 px-4 py-3 text-sm font-semibold text-base-content/60 md:grid">
-				<span>Group</span><span>Location</span><span>Phone number</span><span class="sr-only">Options</span>
+			<div class="hidden grid-cols-[1fr_1fr_minmax(11rem,1fr)_1.5fr_2rem] gap-4 border-b border-base-content/10 px-4 py-3 text-sm font-semibold text-base-content/60 md:grid">
+				<span>Group</span><span>Location</span><span>Phone number</span><span>Description</span><span class="sr-only">Options</span>
 			</div>
 
-			{#each data.letterCounts as [letter, count] (letter)}
-				<LetterSection bind:this={sections[letter]} {letter} {count} first={letter === firstLetter} />
+			{#each data.groups as group, i (groupKey(group.name))}
+				<GroupSection bind:this={sections[groupKey(group.name)]} name={group.name} count={group.count} first={i === 0} />
 			{/each}
 		</div>
 	{/if}

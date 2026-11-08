@@ -6,23 +6,26 @@ const MIGRATIONS: { version: number; name: string; sql: string }[] = [
 	{
 		version: 1,
 		name: 'create contacts',
-		// group_name and location are NOCASE, so "family" sorts and matches like "Family".
-		// index_letter is the side-index letter (A–Z or "#"), set by the app on every save.
+		// group_name and location are NOCASE, so "family" sorts and matches like "Family" (same group).
 		// The index matches the list order exactly (SQLite indexes end with the row id, the final
-		// tie-breaker), so loading a letter in chunks never sorts the table.
+		// tie-breaker), so loading a group in chunks never sorts the table, and group counts read it.
 		sql: `
 			CREATE TABLE contacts (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				group_name TEXT NOT NULL COLLATE NOCASE,
 				location TEXT NOT NULL COLLATE NOCASE,
 				phone_number TEXT NOT NULL,
-				index_letter TEXT NOT NULL DEFAULT '#',
 				created_at TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			);
-			CREATE INDEX contacts_letter_section_order
-				ON contacts (index_letter, group_name, location, phone_number);
+			CREATE INDEX contacts_group_order ON contacts (group_name, location, phone_number);
 		`
+	},
+	{
+		version: 2,
+		name: 'add contact description',
+		// Optional free text; existing contacts get an empty description.
+		sql: `ALTER TABLE contacts ADD COLUMN description TEXT NOT NULL DEFAULT ''`
 	}
 ];
 

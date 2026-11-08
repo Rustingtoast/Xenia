@@ -13,6 +13,21 @@ A web app usable from both desktop and phone browsers.
 
 ## Getting started
 
+### Quick way: one script
+
+On macOS or Linux (also a Raspberry Pi with 64-bit OS), this installs everything: mise, Bun, the packages,
+and a dev database with sample contacts. Safe to run again.
+
+```sh
+git clone https://github.com/Rustingtoast/Xenia.git
+cd Xenia
+scripts/install.sh                    # add --no-sample-data for an empty database (real installations)
+                                      # add --with-browsers to also get Firefox for the browser tests
+mise run dev                          # http://localhost:5173
+```
+
+Or do the same by hand:
+
 ### 1. Install mise
 
 mise installs the right Bun version for this project automatically.
@@ -90,7 +105,7 @@ XENIA_SECRET=<secret> DATABASE_PATH=storage/xenia.sqlite3 PORT=3000 bun ./build
 | Path                       | What's there                                                   |
 | -------------------------- | -------------------------------------------------------------- |
 | `src/routes/`              | Pages, form actions and JSON endpoints                         |
-| `src/lib/components/`      | Svelte components (list sections, rows, side index, theme toggle) |
+| `src/lib/components/`      | Svelte components (Group list, group sections, rows, theme toggle) |
 | `src/lib/server/`          | Server-only code: database, migrations, contact queries, undo  |
 | `src/lib/contacts.ts`      | Contact types and rules shared by server and browser           |
 | `scripts/db.ts`            | The `db:*` commands and the sample contacts                    |

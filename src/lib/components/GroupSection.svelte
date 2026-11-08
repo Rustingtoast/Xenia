@@ -1,12 +1,12 @@
 <script lang="ts">
-	// One side-index letter: a sticky heading plus its contacts, loaded lazily in chunks
-	// (GET /contacts/letters/[letter]) when the placeholder below the loaded rows comes into view.
+	// One group: a sticky heading plus its contacts, loaded lazily in chunks
+	// (GET /contacts/group?name=…) when the placeholder below the loaded rows comes into view.
 	// The placeholder reserves the height of the rows still to come, so the page doesn't jump
 	// while loading and the side index lands on the right spot.
-	import { SectionLoadState, letterParam, sectionId, type Contact, type SectionChunkResponse } from '#lib/contacts.js';
+	import { SectionLoadState, sectionId, type Contact, type SectionChunkResponse } from '#lib/contacts.js';
 	import ContactRow from './ContactRow.svelte';
 
-	let { letter, count, first = false }: { letter: string; count: number; first?: boolean } = $props();
+	let { name, count, first = false }: { name: string; count: number; first?: boolean } = $props();
 
 	let contacts = $state<Contact[]>([]);
 	let loadState = $state<SectionLoadState>(SectionLoadState.NotStarted);
@@ -25,9 +25,10 @@
 		loading = true;
 		failed = false;
 		const started = generation;
-		const query = next ? `?after=${encodeURIComponent(next)}` : '';
+		const query = new URLSearchParams({ name });
+		if (next) query.set('after', next);
 		try {
-			const response = await fetch(`/contacts/letters/${letterParam(letter)}${query}`);
+			const response = await fetch(`/contacts/group?${query}`);
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			const chunk: SectionChunkResponse = await response.json();
 			if (started !== generation) return;
@@ -67,15 +68,16 @@
 	}
 </script>
 
-<section id={sectionId(letter)} aria-labelledby="{sectionId(letter)}-heading" class="scroll-mt-2">
+<section id={sectionId(name)} aria-labelledby="{sectionId(name)}-heading" class="scroll-mt-(--list-sticky-top)">
 	<h2
-		id="{sectionId(letter)}-heading"
+		id="{sectionId(name)}-heading"
 		class={[
-			'sticky top-0 z-10 bg-base-200/95 px-4 py-1 text-sm font-bold text-primary backdrop-blur',
+			// Sticks just below the sticky top bar + search bar (--list-sticky-top in app.css).
+			'sticky top-(--list-sticky-top) z-10 bg-base-200/95 px-4 py-1 text-sm font-bold text-primary backdrop-blur',
 			first && 'rounded-t-box md:rounded-none'
 		]}
 	>
-		{letter}
+		{name}
 	</h2>
 	<ul>
 		{#each contacts as contact (contact.id)}

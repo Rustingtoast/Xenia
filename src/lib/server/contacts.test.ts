@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
 import {
 	ContactValidationError,
-	countInSection,
+	countInGroup,
 	createContact,
 	decodeListPosition,
 	deleteContact,
 	encodeListPosition,
 	findContact,
-	letterCounts,
+	groupCounts,
 	listPosition,
 	sectionChunk,
 	validateContact
@@ -55,15 +55,29 @@ describe('validateContact', () => {
 
 	test('trims and collapses whitespace', () => {
 		const { values } = validateContact({ groupName: '  Work  ', location: ' New  York ', phoneNumber: ' 555   0101 ' });
-		expect(values).toEqual({ groupName: 'Work', location: 'New York', phoneNumber: '555 0101' });
+		expect(values).toEqual({ groupName: 'Work', location: 'New York', phoneNumber: '555 0101', description: '' });
+	});
+
+	test('description is optional, only trimmed (line breaks kept) and limited to 1000 characters', () => {
+		expect(validateContact(valid).errors).toEqual({});
+		const { values } = validateContact({ ...valid, description: '  Call after 6 pm.\n  Gate code 1234  ' });
+		expect(values.description).toBe('Call after 6 pm.\n  Gate code 1234');
+		expect(validateContact({ ...valid, description: 'x'.repeat(1001) }).errors.description).toEqual([
+			'is too long (maximum is 1000 characters)'
+		]);
 	});
 });
 
 describe('createContact', () => {
-	test('stores the normalized contact with its side-index letter', () => {
+	test('stores the normalized contact', () => {
 		const contact = createContact(db, { groupName: ' Ärzte ', location: 'Bern', phoneNumber: '555 0150' });
-		expect(contact).toMatchObject({ groupName: 'Ärzte', location: 'Bern', phoneNumber: '555 0150', indexLetter: 'A' });
+		expect(contact).toMatchObject({ groupName: 'Ärzte', location: 'Bern', phoneNumber: '555 0150', description: '' });
 		expect(findContact(db, contact.id)).toEqual(contact);
+	});
+
+	test('stores the description', () => {
+		const contact = createContact(db, { groupName: 'Work', location: 'Bern', phoneNumber: '555 0150', description: 'Reception\nAsk for Anna' });
+		expect(findContact(db, contact.id)!.description).toBe('Reception\nAsk for Anna');
 	});
 
 	test('refuses invalid input', () => {
@@ -80,71 +94,66 @@ test('deleteContact returns the deleted contact, or null', () => {
 	expect(deleteContact(db, contact.id)).toBeNull();
 });
 
-test('letterCounts counts per letter in A–Z order with # last', () => {
-	addContact(db, { groupName: '112 Emergency' });
+test('groupCounts lists every group with its count in order, "family" and "Family" being one group', () => {
 	addContact(db, { groupName: 'Work' });
 	addContact(db, { groupName: 'family' });
 	addContact(db, { groupName: 'Family' });
 	addContact(db, { groupName: 'Ärzte' });
-	expect(letterCounts(db)).toEqual([
-		['A', 1],
-		['F', 2],
-		['W', 1],
-		['#', 1]
+	addContact(db, { groupName: '112 Emergency' });
+	expect(groupCounts(db)).toEqual([
+		{ name: '112 Emergency', count: 1 },
+		{ name: 'Family', count: 2 }, // the capitalized spelling is shown
+		{ name: 'Work', count: 1 },
+		{ name: 'Ärzte', count: 1 } // SQLite sorts non-ASCII letters after Z
 	]);
 });
 
 describe('sectionChunk', () => {
-	test('sorts by group and location ignoring case', () => {
+	test('returns one group, sorted by location ignoring case, matching the group name ignoring case', () => {
 		const zurich = addContact(db, { groupName: 'Family', location: 'Zurich' });
-		const lowercase = addContact(db, { groupName: 'family', location: 'Aarau' });
-		const upperLocation = addContact(db, { groupName: 'Family', location: 'BERN' });
-		expect(sectionChunk(db, 'F').contacts.map((c) => c.id)).toEqual([lowercase.id, upperLocation.id, zurich.id]);
+		const aarau = addContact(db, { groupName: 'family', location: 'Aarau' });
+		const bern = addContact(db, { groupName: 'Family', location: 'BERN' });
+		addContact(db, { groupName: 'Friends', location: 'Basel' });
+		expect(sectionChunk(db, 'FAMILY').contacts.map((c) => c.id)).toEqual([aarau.id, bern.id, zurich.id]);
+		expect(countInGroup(db, 'family')).toBe(3);
 	});
 
-	test('pages through a letter in list order', () => {
+	test('pages through a group in list order', () => {
 		const family = Array.from({ length: 7 }, (_, i) => addContact(db, { groupName: 'Family', location: `City ${i}` }));
 
-		const first = sectionChunk(db, 'F', undefined, 3);
+		const first = sectionChunk(db, 'Family', undefined, 3);
 		expect(first.contacts).toEqual(family.slice(0, 3));
 		expect(first).toMatchObject({ more: true, remaining: 4 });
 
-		const second = sectionChunk(db, 'F', listPosition(first.contacts.at(-1)!), 3);
+		const second = sectionChunk(db, 'Family', listPosition(first.contacts.at(-1)!), 3);
 		expect(second.contacts).toEqual(family.slice(3, 6));
 		expect(second).toMatchObject({ more: true, remaining: 1 });
 
-		const last = sectionChunk(db, 'F', listPosition(second.contacts.at(-1)!), 3);
+		const last = sectionChunk(db, 'Family', listPosition(second.contacts.at(-1)!), 3);
 		expect(last.contacts).toEqual([family[6]]);
 		expect(last).toMatchObject({ more: false, remaining: 0 });
 	});
 
 	test('continues correctly when contacts were deleted meanwhile', () => {
 		const family = Array.from({ length: 6 }, (_, i) => addContact(db, { groupName: 'Family', location: `City ${i}` }));
-		const first = sectionChunk(db, 'F', undefined, 3);
+		const first = sectionChunk(db, 'Family', undefined, 3);
 
 		deleteContact(db, family[1].id); // a row that is already shown
 		deleteContact(db, family[2].id); // the very row the next chunk continues after
 
-		const second = sectionChunk(db, 'F', listPosition(first.contacts.at(-1)!), 3);
+		const second = sectionChunk(db, 'Family', listPosition(first.contacts.at(-1)!), 3);
 		expect(second.contacts).toEqual(family.slice(3, 6)); // nothing skipped or repeated
 	});
 
-	test('only returns the requested letter', () => {
-		addContact(db, { groupName: 'Work' });
-		const friend = addContact(db, { groupName: 'Friends' });
-		expect(sectionChunk(db, 'F').contacts).toEqual([friend]);
-		expect(countInSection(db, 'W')).toBe(1);
-	});
-
-	test('uses the list-order index instead of sorting the table', () => {
+	test('uses the group-order index instead of sorting the table', () => {
 		const plan = db
 			.query<{ detail: string }, []>(
-				"EXPLAIN QUERY PLAN SELECT * FROM contacts WHERE index_letter = 'F' AND (group_name, location, phone_number, id) > ('a', 'b', 'c', 1) ORDER BY group_name, location, phone_number, id LIMIT 101"
+				"EXPLAIN QUERY PLAN SELECT * FROM contacts WHERE group_name = 'Family' AND (location, phone_number, id) > ('b', 'c', 1) ORDER BY location, phone_number, id LIMIT 101"
 			)
 			.all()
 			.map((row) => row.detail)
 			.join(' | ');
-		expect(plan).toContain('USING INDEX contacts_letter_section_order');
+		expect(plan).toContain('USING INDEX contacts_group_order');
 		expect(plan).not.toContain('TEMP B-TREE');
 	});
 });
@@ -152,7 +161,7 @@ describe('sectionChunk', () => {
 test('list positions survive the round trip through a URL, and junk is rejected', () => {
 	const position = listPosition(addContact(db, { groupName: 'Café "Zürich"' }));
 	expect(decodeListPosition(encodeListPosition(position))).toEqual(position);
-	for (const junk of ['not-a-position', '', Buffer.from('[1,2,3,4]').toString('base64url')]) {
+	for (const junk of ['not-a-position', '', Buffer.from('[1,2,3]').toString('base64url')]) {
 		expect(decodeListPosition(junk)).toBeNull();
 	}
 });

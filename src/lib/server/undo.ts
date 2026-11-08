@@ -6,7 +6,7 @@ import { ContactValidationError, createContact, findContact } from './contacts.j
 export const UNDO_WINDOW_MS = 5 * 60 * 1000;
 
 type UndoPayload = {
-	contact: Pick<Contact, 'id' | 'groupName' | 'location' | 'phoneNumber' | 'createdAt'>;
+	contact: Pick<Contact, 'id' | 'groupName' | 'location' | 'phoneNumber' | 'description' | 'createdAt'>;
 	expiresAt: number;
 };
 
@@ -30,6 +30,7 @@ export async function createUndoToken(contact: Contact, secret: string, now = Da
 			groupName: contact.groupName,
 			location: contact.location,
 			phoneNumber: contact.phoneNumber,
+			description: contact.description,
 			createdAt: contact.createdAt
 		},
 		expiresAt: now + UNDO_WINDOW_MS

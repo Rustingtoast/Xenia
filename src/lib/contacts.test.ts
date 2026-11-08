@@ -1,28 +1,19 @@
-import { describe, expect, test } from 'bun:test';
-import { indexLetterFor, letterFromParam, letterParam, sectionId, telHref } from './contacts.js';
+import { expect, test } from 'bun:test';
+import { groupKey, sectionId, telHref } from './contacts.js';
 
-describe('indexLetterFor', () => {
-	test('is the first letter of the group, uppercased, without accents', () => {
-		expect(indexLetterFor('family')).toBe('F');
-		expect(indexLetterFor('Ärzte')).toBe('A');
-		expect(indexLetterFor('  école')).toBe('E');
-	});
-
-	test('is "#" for digits, symbols and empty groups', () => {
-		expect(indexLetterFor('112 Emergency')).toBe('#');
-		expect(indexLetterFor('(work)')).toBe('#');
-		expect(indexLetterFor('')).toBe('#');
-	});
+test('groupKey ignores ASCII case only, like the database (SQLite NOCASE)', () => {
+	expect(groupKey('Family')).toBe(groupKey('family'));
+	expect(groupKey('FAMILY')).toBe('family');
+	expect(groupKey('Ärzte')).not.toBe(groupKey('ärzte')); // NOCASE doesn't fold non-ASCII letters
 });
 
-test('letter params and section ids map "#" to "other"', () => {
-	expect(letterParam('#')).toBe('other');
-	expect(letterParam('W')).toBe('W');
-	expect(letterFromParam('other')).toBe('#');
-	expect(letterFromParam('W')).toBe('W');
-	expect(letterFromParam('w')).toBeUndefined();
-	expect(letterFromParam('WW')).toBeUndefined();
-	expect(sectionId('#')).toBe('letter-other');
+test('sectionId is a stable, valid HTML id per group', () => {
+	expect(sectionId('Family')).toBe(sectionId('family'));
+	expect(sectionId('Family')).toMatch(/^group-family-[0-9a-z]+$/);
+	expect(sectionId('a b')).not.toBe(sectionId('a-b'));
+	expect(sectionId('112 / Notruf')).toMatch(/^group-112-notruf-[0-9a-z]+$/);
+	expect(sectionId('ÄÖÜ')).toMatch(/^group-x-[0-9a-z]+$/);
+	expect(sectionId('Work')).not.toContain(' ');
 });
 
 test('telHref removes spaces', () => {
