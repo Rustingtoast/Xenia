@@ -1,0 +1,10 @@
+<%# A lazy turbo-frame: loads its chunk of contacts when scrolled into view.
+    Until then it reserves the height of the rows it will hold, so the page doesn't jump around
+    and the side index lands on the right spot. Keep the row heights in sync with _contact.html.erb. %>
+<%= turbo_frame_tag frame_id, src:, loading: :lazy, class: "block" do %>
+  <div aria-busy="true" style="--rows: <%= rows %>"
+       class="flex h-[calc(var(--rows)*var(--contact-row-height))] items-start justify-center pt-4">
+    <span class="loading loading-dots loading-sm text-base-content/40"></span>
+    <span class="sr-only">Loading contacts…</span>
+  </div>
+<% end %>

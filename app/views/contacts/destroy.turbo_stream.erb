@@ -1,0 +1,8 @@
+<% if @letter_counts.key?(@contact.index_letter) %>
+  <%= turbo_stream.remove @contact %>
+<% else %>
+  <%# Its letter is now empty: rebuild the list so the section and side-index letter disappear. %>
+  <%= turbo_stream.replace "phonebook", partial: "phonebook", locals: { letter_counts: @letter_counts } %>
+<% end %>
+<%= turbo_stream.update "contact-count", pluralize(@letter_counts.values.sum, "contact") %>
+<%= turbo_stream.update "flash", partial: "flash", locals: { notice: "Contact deleted.", alert: nil, undo_token: @undo_token } %>

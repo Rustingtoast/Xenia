@@ -20,7 +20,7 @@ description = "Run the test suite (same command as CI)"
 run = "bin/rails db:test:prepare test"
 
 [tasks."test:system"]
-description = "Run browser-based system tests in headless Chrome (same command as CI)"
+description = "Run browser-based system tests in headless Firefox (same command as CI)"
 run = "bin/rails db:test:prepare test:system"
 
 [tasks.lint]

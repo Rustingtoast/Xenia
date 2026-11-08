@@ -1,9 +1,24 @@
+# Fixtures skip model callbacks, so index_letter (normally set on save) is filled in by hand.
 family_zurich:
   group_name: Family
   location: Zurich
   phone_number: +1 555-0101
+  index_letter: F
 
 work_bern:
   group_name: Work
   location: Bern
   phone_number: (555) 010-0113
+  index_letter: W
+
+doctors_basel:
+  group_name: Ärzte
+  location: Basel
+  phone_number: 555 0130
+  index_letter: A
+
+emergency_numbers:
+  group_name: 112 Emergency
+  location: Zurich
+  phone_number: "112"
+  index_letter: "#"
