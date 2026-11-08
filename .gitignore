@@ -186,3 +186,6 @@ dist
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
+
+# Local, private Claude Code notes
+/CLAUDE.local.md
