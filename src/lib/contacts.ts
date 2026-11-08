@@ -59,11 +59,6 @@ export function sectionId(groupName: string): string {
 	return `group-${readable || 'x'}-${hash.toString(36)}`;
 }
 
-/** tel: link for a phone number as typed ("+1 555-0101" → "tel:+1555-0101"). */
-export function telHref(phoneNumber: string): string {
-	return `tel:${phoneNumber.replaceAll(' ', '')}`;
-}
-
 /** What GET /contacts/group returns: one chunk of a group section. */
 export type SectionChunkResponse = {
 	contacts: Contact[];

@@ -25,6 +25,11 @@ export function rowSelector(contact: Contact): string {
 	return `#contact_${contact.id}`;
 }
 
+/** A field as shown in the list row itself (not in the row's details dialog). */
+export function rowField(field: 'phone-number' | 'location'): string {
+	return `:scope > div > [data-field="${field}"]`;
+}
+
 /** Matches Group list entries ("Family 2") by group name, in order. */
 export function groupListEntries(names: string[]): RegExp[] {
 	return names.map((name) => new RegExp(`^\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+\\d+\\s*$`));

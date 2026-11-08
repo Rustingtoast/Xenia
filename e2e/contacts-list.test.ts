@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { SECTION_CHUNK_SIZE, sectionId } from '../src/lib/contacts.ts';
-import { LIST_STICKY_TOP, STANDARD_CONTACTS, groupListEntries, rowSelector, setContacts } from './support.ts';
+import { LIST_STICKY_TOP, STANDARD_CONTACTS, groupListEntries, rowField, rowSelector, setContacts } from './support.ts';
 
 const sectionTop = (page: Page, id: string) =>
 	page.evaluate((id) => document.getElementById(id)!.getBoundingClientRect().top, id);
@@ -18,7 +18,8 @@ test('shows group sections, the Group list and the contact rows', async ({ page 
 	await expect(page.getByRole('complementary', { name: 'Group list' }).getByRole('link')).toHaveText(groupListEntries(STANDARD_GROUPS));
 
 	const row = page.locator(rowSelector(family));
-	await expect(row.getByRole('link', { name: '+1 555-0101' })).toHaveAttribute('href', 'tel:+1555-0101');
+	await expect(row.locator(rowField('phone-number'))).toHaveText('+1 555-0101');
+	await expect(row.getByRole('link')).toHaveCount(0); // plain text: Xenia doesn't dial numbers
 	await expect(row).toContainText('Family');
 	await expect(row).toContainText('Zurich');
 });
@@ -110,7 +111,7 @@ test('long phone numbers are never cut off on wide screens', async ({ page }) =>
 		{ groupName: 'Friends', location: 'Lausanne', phoneNumber: '+1 (555) 010-0108', description: 'A rather long description that fills its column' }
 	]);
 	await page.goto('/');
-	const number = page.locator(rowSelector(contact)).getByRole('link', { name: '+1 (555) 010-0108' });
+	const number = page.locator(rowSelector(contact)).locator(rowField('phone-number'));
 	expect(await number.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
 
@@ -125,8 +126,8 @@ test('the phone layout is a centered, phone-wide column with the number first an
 
 	const row = page.locator(rowSelector(contact));
 	const fontSize = (selector: string) => row.locator(selector).first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-	expect(await fontSize(':scope > div > a')).toBeGreaterThan(await fontSize(':scope > div > span.truncate')); // number > location
-	expect(await fontSize(':scope > div > span.truncate')).toBeGreaterThan(await fontSize(':scope > div > button')); // location > description
+	expect(await fontSize(rowField('phone-number'))).toBeGreaterThan(await fontSize(rowField('location'))); // number > location
+	expect(await fontSize(rowField('location'))).toBeGreaterThan(await fontSize(':scope > div > button')); // location > description
 	await expect(row.locator(':scope > div .badge')).toBeHidden(); // the group is in the section heading, not repeated per entry
 
 	await page.setViewportSize({ width: 1400, height: 900 });

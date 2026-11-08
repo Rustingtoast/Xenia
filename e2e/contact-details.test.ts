@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ContactField, CONTACT_FIELD_LABELS } from '../src/lib/contact-fields.ts';
-import { STANDARD_CONTACTS, rowSelector, setContacts } from './support.ts';
+import { STANDARD_CONTACTS, rowField, rowSelector, setContacts } from './support.ts';
 
 const LONG_DESCRIPTION =
 	'Dr. Weber, family doctor.\nOpening hours: Mon–Fri 8–12 and 14–18.\nEmergencies outside these hours: call the emergency practice.';
@@ -21,11 +21,8 @@ for (const [screen, viewport] of [
 		const description = row.getByRole('button', { name: /^Details for 555-0115/ });
 		expect(await description.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
 
-		// Tap the entry beside the number (not on it: that calls).
-		const number = (await row.getByRole('link', { name: '555-0115' }).boundingBox())!;
-		const rowBox = (await row.boundingBox())!;
-		await page.mouse.click(number.x + number.width + 40, number.y + number.height / 2);
-		expect(number.x + number.width + 40).toBeLessThan(rowBox.x + rowBox.width - 60); // still inside the entry
+		// Tap the entry; the number is plain text, so tapping it opens the details like the rest.
+		await row.locator(rowField('phone-number')).click();
 
 		const dialog = page.getByRole('dialog', { name: 'Contact details' });
 		await expect(dialog).toBeVisible();
@@ -36,7 +33,8 @@ for (const [screen, viewport] of [
 		await expect(dialog.locator(`[data-field="${ContactField.Location}"]`)).toHaveText('Zurich');
 		await expect(dialog.locator(`[data-field="${ContactField.Group}"]`)).toHaveText('Doctors');
 		await expect(dialog.locator(`[data-field="${ContactField.Description}"]`)).toHaveText(LONG_DESCRIPTION);
-		await expect(dialog.getByRole('link', { name: 'Call' })).toHaveAttribute('href', 'tel:555-0115');
+		await expect(dialog.getByRole('link')).toHaveCount(0); // no "Call": Xenia doesn't dial numbers
+		await expect(dialog.getByRole('button')).toHaveText(['Close']);
 
 		await dialog.getByRole('button', { name: 'Close' }).click();
 		await expect(dialog).toBeHidden();
@@ -48,12 +46,11 @@ for (const [screen, viewport] of [
 	});
 }
 
-test('the number calls, the ⋮ menu opens the menu: neither opens the details', async ({ page }) => {
+test('the ⋮ menu opens the menu, not the details', async ({ page }) => {
 	const [contact] = setContacts();
 	await page.goto('/');
 	const row = page.locator(rowSelector(contact));
 
-	await expect(row.getByRole('link', { name: '+1 555-0101' })).toHaveAttribute('href', 'tel:+1555-0101');
 	await row.getByRole('button', { name: /^Options for/ }).click();
 	await expect(row.getByRole('button', { name: 'Delete' })).toBeVisible();
 	await expect(page.locator('dialog[open]')).toHaveCount(0);

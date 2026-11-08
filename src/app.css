@@ -26,3 +26,23 @@
 		--contact-row-height: 3.5625rem; /* 57px, measured */
 	}
 }
+
+/* Soft banners (daisyUI `alert alert-soft alert-*`): daisyUI colours their text with the plain alert colour,
+   which is hard to read in light mode (yellow/green text ≈ 1.7–1.9:1). Mixing it with the normal text colour
+   keeps the hue but makes it readable in every variant and both themes (≈ 5.5:1 light, ≈ 7:1 dark).
+   Unlayered CSS, so it wins over daisyUI's layered styles without !important. */
+.alert-soft {
+	color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 45%, var(--color-base-content));
+}
+
+/* Success banners ("Contact deleted." / "Contact restored."): a brighter green than daisyUI's 8% tint. */
+.alert-soft.alert-success {
+	background: color-mix(in oklab, var(--color-success) 25%, transparent);
+	--alert-border-color: color-mix(in oklab, var(--color-success) 40%, transparent);
+}
+
+/* Green buttons on a green banner (the Undo button): an edge in the text colour mixed with green, so the button
+   stands out from the banner in light mode too (WCAG 1.4.11 asks 3:1 for a control's boundary). */
+.alert-soft.alert-success .btn-success {
+	border-color: color-mix(in oklab, var(--color-success) 45%, var(--color-base-content));
+}

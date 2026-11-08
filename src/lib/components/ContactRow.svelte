@@ -1,12 +1,13 @@
 <script lang="ts">
 	// One phonebook row with its options menu (⋮), delete confirmation and contact details dialogs.
-	// Tapping the entry (anywhere except the number, which calls, and the ⋮ menu) opens the details.
+	// Tapping the entry (anywhere except the ⋮ menu) opens the details. Numbers are plain text: Xenia is not
+	// a phone that dials, so there are no tel: links.
 	// Phones: number, location, description (left-aligned, in a centered column, see +page.svelte).
 	// Wider screens: Group | Location | Phone | Description columns + ⋮.
 	// Every line is cut off with "…" rather than wrapping, so all rows have the same height: it must match
 	// --contact-row-height in app.css (lazy-loading placeholders rely on it).
 	import { enhance } from '$app/forms';
-	import { telHref, type Contact } from '#lib/contacts.js';
+	import type { Contact } from '#lib/contacts.js';
 	import ContactDetailsDialog from './ContactDetailsDialog.svelte';
 
 	let { contact, ondeleted }: { contact: Contact; ondeleted: (id: number) => void } = $props();
@@ -17,7 +18,7 @@
 	let detailsDialog: ContactDetailsDialog;
 
 	// A click anywhere on the entry opens the details, unless it was on something with its own job:
-	// the number (calls), the ⋮ menu, a button, or inside one of the row's dialogs.
+	// the ⋮ menu, a button, or inside one of the row's dialogs.
 	function openDetailsFromRow(event: MouseEvent) {
 		if ((event.target as Element).closest('a, button, [role="button"], .dropdown, dialog')) return;
 		detailsDialog.open();
@@ -48,16 +49,17 @@
 	     (smallest, muted). The group is not repeated here: the section heading above already shows it.
 	     md+: these become the Group | Location | Phone | Description columns. -->
 	<div class="flex min-w-0 flex-1 flex-col md:contents">
-		<!-- Only as wide as the number (self-start), so tapping beside it opens the details instead of calling. -->
-		<a
-			href={telHref(contact.phoneNumber)}
-			class="link max-w-full self-start truncate text-lg leading-7 font-semibold tabular-nums link-hover md:order-3 md:justify-self-start md:font-mono md:text-base md:font-normal"
-			>{contact.phoneNumber}</a
+		<span
+			class="truncate text-lg leading-7 font-semibold tabular-nums md:order-3 md:font-mono md:text-base md:font-normal"
+			data-field="phone-number">{contact.phoneNumber}</span
 		>
 		<span class="hidden min-w-0 md:order-1 md:block"
 			><span class="badge max-w-full badge-soft badge-md badge-primary"><span class="truncate">{contact.groupName}</span></span></span
 		>
-		<span class="min-w-0 truncate text-sm leading-6 text-base-content/70 md:order-2 md:text-base md:text-base-content">{contact.location}</span>
+		<span
+			class="min-w-0 truncate text-sm leading-6 text-base-content/70 md:order-2 md:text-base md:text-base-content"
+			data-field="location">{contact.location}</span
+		>
 		<!-- Always one line, cut off with "…". It is also the details button for keyboard/screen-reader users. -->
 		<button
 			type="button"

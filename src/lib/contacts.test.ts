@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { groupKey, sectionId, telHref } from './contacts.js';
+import { groupKey, sectionId } from './contacts.js';
 
 test('groupKey ignores ASCII case only, like the database (SQLite NOCASE)', () => {
 	expect(groupKey('Family')).toBe(groupKey('family'));
@@ -14,8 +14,4 @@ test('sectionId is a stable, valid HTML id per group', () => {
 	expect(sectionId('112 / Notruf')).toMatch(/^group-112-notruf-[0-9a-z]+$/);
 	expect(sectionId('ÄÖÜ')).toMatch(/^group-x-[0-9a-z]+$/);
 	expect(sectionId('Work')).not.toContain(' ');
-});
-
-test('telHref removes spaces', () => {
-	expect(telHref('+1 555-0101')).toBe('tel:+1555-0101');
 });

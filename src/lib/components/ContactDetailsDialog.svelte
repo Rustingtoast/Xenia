@@ -2,7 +2,7 @@
 	// All of a contact's information in one view. The fields come from ContactField (contact-fields.ts),
 	// so a new field shows up here by adding it there.
 	import { CONTACT_FIELD_LABELS, ContactField, contactFieldText } from '#lib/contact-fields.js';
-	import { telHref, type Contact } from '#lib/contacts.js';
+	import type { Contact } from '#lib/contacts.js';
 
 	let { contact }: { contact: Contact } = $props();
 
@@ -23,9 +23,7 @@
 					<dt class="text-sm text-base-content/60">{CONTACT_FIELD_LABELS[field]}</dt>
 					<dd class="min-w-0 break-words" data-field={field}>
 						{#if field === ContactField.PhoneNumber}
-							<a href={telHref(contact.phoneNumber)} class="link text-lg font-semibold tabular-nums link-hover"
-								>{contact.phoneNumber}</a
-							>
+							<span class="text-lg font-semibold tabular-nums">{contact.phoneNumber}</span>
 						{:else if field === ContactField.Group}
 							<span class="badge badge-soft badge-primary">{contact.groupName}</span>
 						{:else if field === ContactField.Description && !contact.description}
@@ -40,7 +38,6 @@
 		</dl>
 
 		<div class="modal-action">
-			<a href={telHref(contact.phoneNumber)} class="btn btn-primary">Call</a>
 			<!-- autofocus: the dialog opens with focus on Close (MDN's advice for dialogs), not on the number. -->
 			<!-- svelte-ignore a11y_autofocus -->
 			<form method="dialog"><button class="btn" autofocus>Close</button></form>

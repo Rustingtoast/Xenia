@@ -10,7 +10,8 @@
 	const sections: Record<string, GroupSection> = $state({});
 
 	const groupKeys = $derived(new Set(data.groups.map((group) => groupKey(group.name))));
-	const outcome = $derived(form?.outcome);
+	/** True while an Undo request is running: the button is disabled so a double tap can't restore twice. */
+	let restoring = $state(false);
 </script>
 
 <svelte:head>
@@ -31,32 +32,45 @@
 		<button type="button" class="btn btn-primary" disabled>+ New</button>
 	</div>
 
+	<!-- Banner colours (readable text, brighter green) are set once for all soft alerts in src/app.css. -->
 	{#if form?.outcome === ActionOutcome.Deleted}
 		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
 			<span>Contact deleted.</span>
 			<form
 				method="POST"
 				action="?/restore"
-				use:enhance={() => {
+				use:enhance={({ cancel }) => {
+					// One restore at a time. Otherwise a double tap sends a second request whose answer ("can't
+					// restore": the contact is back already) arrives last and replaces "Contact restored.".
+					if (restoring) {
+						cancel();
+						return;
+					}
+					restoring = true;
 					return async ({ result, update }) => {
-						const restoredGroup =
-							result.type === 'success' && result.data?.outcome === ActionOutcome.Restored
-								? groupKey((result.data.restored as { groupName: string }).groupName)
-								: undefined;
-						const reloadSection = restoredGroup !== undefined && groupKeys.has(restoredGroup);
-						await update();
-						// A new section loads itself; an existing one reloads so the contact reappears in its place.
-						if (reloadSection) sections[restoredGroup].reload();
+						try {
+							const restoredGroup =
+								result.type === 'success' && result.data?.outcome === ActionOutcome.Restored
+									? groupKey((result.data.restored as { groupName: string }).groupName)
+									: undefined;
+							const reloadSection = restoredGroup !== undefined && groupKeys.has(restoredGroup);
+							await update();
+							// A new section loads itself; an existing one reloads so the contact reappears in its place.
+							if (reloadSection) sections[restoredGroup].reload();
+						} finally {
+							restoring = false;
+						}
 					};
 				}}
 			>
 				<input type="hidden" name="token" value={form.undoToken} />
-				<button class="btn btn-sm">Undo</button>
+				<!-- Solid green (daisyUI success); its edge is set in src/app.css so it stands out on the green banner. -->
+				<button class="btn btn-sm btn-success" disabled={restoring}>Undo</button>
 			</form>
 		</div>
-	{:else if outcome === ActionOutcome.Restored}
+	{:else if form?.outcome === ActionOutcome.Restored}
 		<div role="status" class="mb-4 alert alert-soft alert-success">Contact restored.</div>
-	{:else if outcome === ActionOutcome.RestoreFailed}
+	{:else if form?.outcome === ActionOutcome.RestoreFailed}
 		<div role="alert" class="mb-4 alert alert-soft alert-warning">This contact can no longer be restored.</div>
 	{/if}
 
