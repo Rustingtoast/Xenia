@@ -1,0 +1,10 @@
+<%= turbo_frame_tag @frame_id, class: "block" do %>
+  <ul>
+    <%= render partial: "contact", collection: @contacts %>
+  </ul>
+  <% if @more %>
+    <%= render "rows_placeholder", frame_id: section_frame_id(@letter, after: @contacts.last.id),
+                                   src: section_contacts_path(letter: letter_param(@letter), after: encode_list_position(@contacts.last)),
+                                   rows: @remaining %>
+  <% end %>
+<% end %>

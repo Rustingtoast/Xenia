@@ -1,0 +1,6 @@
+<section id="<%= index_section_id(letter) %>" aria-labelledby="<%= index_section_id(letter) %>-heading" class="scroll-mt-2">
+  <h2 id="<%= index_section_id(letter) %>-heading"
+      class="sticky top-0 z-10 bg-base-200/95 px-4 py-1 text-sm font-bold text-primary backdrop-blur <%= "rounded-t-box md:rounded-none" if first %>"><%= letter %></h2>
+  <%= render "rows_placeholder", frame_id: section_frame_id(letter),
+                                 src: section_contacts_path(letter: letter_param(letter)), rows: count %>
+</section>
