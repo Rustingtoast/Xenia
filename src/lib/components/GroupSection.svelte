@@ -5,8 +5,16 @@
 	// while loading and the side index lands on the right spot.
 	import { SectionLoadState, sectionId, type Contact, type SectionChunkResponse } from '#lib/contacts.js';
 	import ContactRow from './ContactRow.svelte';
+	import Highlight from './Highlight.svelte';
 
-	let { name, count, first = false }: { name: string; count: number; first?: boolean } = $props();
+	// `search`: only contacts matching it are loaded, and matches are highlighted (issue #7). The page gives every
+	// search its own sections (keyed on it), so a section never mixes results of two searches.
+	let {
+		name,
+		count,
+		first = false,
+		search = ''
+	}: { name: string; count: number; first?: boolean; search?: string } = $props();
 
 	let contacts = $state<Contact[]>([]);
 	let loadState = $state<SectionLoadState>(SectionLoadState.NotStarted);
@@ -27,6 +35,7 @@
 		const started = generation;
 		const query = new URLSearchParams({ name });
 		if (next) query.set('after', next);
+		if (search) query.set('q', search);
 		try {
 			const response = await fetch(`/contacts/group?${query}`);
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -77,11 +86,11 @@
 			first && 'rounded-t-box md:rounded-none'
 		]}
 	>
-		{name}
+		<Highlight text={name} {search} />
 	</h2>
 	<ul>
 		{#each contacts as contact (contact.id)}
-			<ContactRow {contact} ondeleted={remove} />
+			<ContactRow {contact} {search} ondeleted={remove} />
 		{/each}
 	</ul>
 	{#if loadState !== SectionLoadState.Complete}

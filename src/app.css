@@ -46,3 +46,17 @@
 .alert-soft.alert-success .btn-success {
 	border-color: color-mix(in oklab, var(--color-success) 45%, var(--color-base-content));
 }
+
+/* Search matches (Highlight.svelte): a warm marker behind the text. The text takes the normal text colour
+   (not e.g. the purple of group headings), which stays readable on the marker in both themes. */
+.search-match {
+	background-color: color-mix(in oklab, var(--color-warning) 45%, transparent);
+	color: var(--color-base-content);
+	border-radius: 0.2em;
+	padding-inline: 0.05em;
+}
+
+/* The search box has its own clear (✕) button; hide the browser's built-in one (Chrome, Safari) so there's one. */
+input[type='search']::-webkit-search-cancel-button {
+	appearance: none;
+}

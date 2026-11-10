@@ -12,6 +12,7 @@
 
 	/** Pages that show contacts provide their groups; only those get the Group list. */
 	const groups = $derived(page.data.groups as GroupCount[] | undefined);
+	const search = $derived((page.data.search as string | undefined) ?? '');
 
 	let groupListMode = $state<GroupListMode>(GroupListMode.Auto);
 	const docked = new MediaQuery(DOCKED_QUERY, false);
@@ -55,7 +56,7 @@
 </header>
 
 {#if groups}
-	<GroupList {groups} mode={groupListMode} onclose={closeGroupList} />
+	<GroupList {groups} {search} mode={groupListMode} onclose={closeGroupList} />
 {/if}
 
 <!-- Always centered on the full width: the Group list lies on top and never moves it. -->

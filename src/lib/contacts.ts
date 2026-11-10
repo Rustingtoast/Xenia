@@ -37,11 +37,139 @@ export enum SectionLoadState {
 export const SECTION_CHUNK_SIZE = 100;
 
 /**
- * Identifies a group the way the database compares group names (SQLite NOCASE: ASCII letters
- * ignore case, everything else is exact), so "family" and "Family" are the same group.
+ * Lowercases A–Z only, the way the database ignores case (SQLite NOCASE and LIKE): "Family" and "family"
+ * are equal, but "Ärzte" and "ärzte" are not. Keeps the length, so positions stay valid.
  */
+export function foldCase(text: string): string {
+	return text.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+}
+
+/** Identifies a group the way the database compares group names, so "family" and "Family" are the same group. */
 export function groupKey(groupName: string): string {
-	return groupName.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
+	return foldCase(groupName);
+}
+
+/** Longest search text that is used; anything beyond is ignored. */
+export const SEARCH_MAX_LENGTH = 100;
+
+/**
+ * The search as it is applied: trimmed, whitespace collapsed to single spaces, at most SEARCH_MAX_LENGTH
+ * characters. Normalizing twice changes nothing, so the search shown is always the search applied.
+ */
+export function normalizeSearch(search: string): string {
+	const text = search.trim().replace(/\s+/g, ' ');
+	if (text.length <= SEARCH_MAX_LENGTH) return text;
+	// The cut must not leave half an emoji (a lone surrogate) or a space at the end.
+	return text.slice(0, SEARCH_MAX_LENGTH).replace(/[\uD800-\uDBFF]$/, '').trimEnd();
+}
+
+/**
+ * Besides the space itself: what counts as a space when searching. Descriptions keep their line breaks, but
+ * the list shows them on one line, so "doctor. open" must find "…family doctor.\nOpen…". Used here for the
+ * highlighting and in server/contacts.ts for the SQL.
+ */
+export const SPACE_LIKE = ['\t', '\n', '\r'];
+const SPACE_RUN = `[ ${SPACE_LIKE.join('')}]+`;
+
+/**
+ * What a phone number may contain besides digits and a "+" in front: "+41 79 123 45 67", "(555) 010-0199",
+ * "044/123.45.67". The one list behind the validation, the search and its SQL (server/contacts.ts).
+ */
+export const PHONE_SEPARATORS = [' ', '(', ')', '.', '/', '-'];
+const SEPARATOR_CLASS = PHONE_SEPARATORS.map((char) => `\\${char}`).join('');
+
+/** A valid phone number: digits and separators, optionally starting with "+". */
+export const PHONE_FORMAT = new RegExp(`^\\+?[0-9${SEPARATOR_CLASS}]+$`);
+/** A search that could be (part of) a phone number. */
+const PHONE_LIKE = new RegExp(`^[0-9+${SEPARATOR_CLASS}]+$`);
+/** A phone-like search needs this many digits before it also finds numbers that are written differently. */
+export const PHONE_SEARCH_MIN_DIGITS = 4;
+
+/**
+ * When a search looks like (part of) a phone number, the search without separators: "555 01-01" → "5550101".
+ * Such a search also finds numbers written differently ("+1 555-0101"). A "+" is kept: "+4179" only finds
+ * numbers that start with it.
+ * null for words ("Zurich 1") and for short searches such as "1.5", "24/7" or "+41": those match as typed
+ * only, otherwise they'd find every number that has these digits next to each other ("+1 555…").
+ */
+export function compactPhoneSearch(search: string): string | null {
+	const text = normalizeSearch(search);
+	if (!PHONE_LIKE.test(text)) return null;
+	const compact = text.replace(/[^0-9+]/g, '');
+	return compact.replace(/\+/g, '').length >= PHONE_SEARCH_MIN_DIGITS ? compact : null;
+}
+
+/** A piece of a text: either plain, or matching the search (shown highlighted). */
+export type TextPart = { text: string; match: boolean };
+
+/** Cuts a text into plain and matching parts; `ranges` are the matches as [start, end), in order. */
+function splitAtRanges(text: string, ranges: [number, number][]): TextPart[] {
+	const parts: TextPart[] = [];
+	let from = 0;
+	for (const [start, end] of ranges) {
+		if (start > from) parts.push({ text: text.slice(from, start), match: false });
+		parts.push({ text: text.slice(start, end), match: true });
+		from = end;
+	}
+	if (from < text.length) parts.push({ text: text.slice(from), match: false });
+	return parts;
+}
+
+/** A search prepared for highlighting: `words` finds it in a text, `phone` is its compactPhoneSearch. */
+type SearchMatcher = { search: string; words: RegExp | null; phone: string | null };
+let lastMatcher: SearchMatcher | undefined;
+
+/** Prepared once per search, not per text: every highlighted text on the page asks for the same search. */
+function searchMatcher(search: string): SearchMatcher {
+	if (lastMatcher?.search !== search) {
+		const words = foldCase(normalizeSearch(search)).split(' ').filter(Boolean);
+		lastMatcher = {
+			search,
+			// A space in the search stands for any run of spaces, tabs and line breaks in the text.
+			words: words.length
+				? new RegExp(words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join(SPACE_RUN), 'g')
+				: null,
+			phone: compactPhoneSearch(search)
+		};
+	}
+	return lastMatcher;
+}
+
+/**
+ * Splits text into plain and matching parts, for highlighting a search:
+ * highlightParts("Zurich West", "west") → [{ text: "Zurich ", match: false }, { text: "West", match: true }].
+ * Matches the way the database does (A–Z ignore case, a space also stands for a line break), so what is
+ * highlighted is what made the contact match.
+ */
+export function highlightParts(text: string, search: string): TextPart[] {
+	const { words } = searchMatcher(search);
+	if (!words) return [{ text, match: false }];
+	// foldCase keeps the length, so positions in the folded text are positions in the text.
+	const matches = Array.from(foldCase(text).matchAll(words), (match): [number, number] => [
+		match.index,
+		match.index + match[0].length
+	]);
+	return splitAtRanges(text, matches);
+}
+
+/**
+ * highlightParts for phone numbers: if the search doesn't appear as typed, but does when separators are
+ * ignored (see compactPhoneSearch), that stretch is marked: ("+1 555-0101", "5550101") → "+1 " + [555-0101].
+ */
+export function phoneHighlightParts(phoneNumber: string, search: string): TextPart[] {
+	const asTyped = highlightParts(phoneNumber, search);
+	const { phone } = searchMatcher(search);
+	if (!phone || asTyped.some((part) => part.match)) return asTyped;
+
+	const positions: number[] = []; // where each digit (and the "+") of the number is
+	for (let i = 0; i < phoneNumber.length; i++) if (/[0-9+]/.test(phoneNumber[i])) positions.push(i);
+	const compact = positions.map((i) => phoneNumber[i]).join('');
+
+	const matches: [number, number][] = [];
+	for (let at = compact.indexOf(phone); at !== -1; at = compact.indexOf(phone, at + phone.length)) {
+		matches.push([positions[at], positions[at + phone.length - 1] + 1]);
+	}
+	return splitAtRanges(phoneNumber, matches);
 }
 
 /**

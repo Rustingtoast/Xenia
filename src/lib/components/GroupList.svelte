@@ -8,13 +8,15 @@
 	import { sectionId, type GroupCount } from '#lib/contacts.js';
 	import { GroupListMode } from '#lib/group-list.js';
 	import ExportDialog from './ExportDialog.svelte';
+	import Highlight from './Highlight.svelte';
 	import SettingsDialog from './SettingsDialog.svelte';
 
 	let {
 		groups,
+		search = '',
 		mode,
 		onclose
-	}: { groups: GroupCount[]; mode: GroupListMode; onclose: () => void } = $props();
+	}: { groups: GroupCount[]; search?: string; mode: GroupListMode; onclose: () => void } = $props();
 
 	let exportDialog: ExportDialog;
 	let settingsDialog: SettingsDialog;
@@ -57,14 +59,14 @@
 	</div>
 
 	{#if groups.length === 0}
-		<p class="flex-1 px-4 py-3 text-sm text-base-content/60">No groups yet.</p>
+		<p class="flex-1 px-4 py-3 text-sm text-base-content/60">{search ? 'No matching groups.' : 'No groups yet.'}</p>
 	{:else}
 		<ul class="menu w-full flex-1 flex-nowrap overflow-y-auto overscroll-contain">
 			{#each groups as group (sectionId(group.name))}
 				<li>
 					<!-- On smaller screens, jumping to a group also closes the drawer. -->
 					<a href="#{sectionId(group.name)}" class="flex justify-between gap-2" onclick={() => mode === GroupListMode.Open && onclose()}>
-						<span class="truncate">{group.name}</span>
+						<span class="truncate"><Highlight text={group.name} {search} /></span>
 						<span class="badge badge-ghost badge-sm">{group.count}</span>
 					</a>
 				</li>

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Database } from 'bun:sqlite';
 import {
 	ContactValidationError,
+	countContacts,
 	countInGroup,
 	createContact,
 	decodeListPosition,
@@ -164,4 +165,120 @@ test('list positions survive the round trip through a URL, and junk is rejected'
 	for (const junk of ['not-a-position', '', Buffer.from('[1,2,3]').toString('base64url')]) {
 		expect(decodeListPosition(junk)).toBeNull();
 	}
+});
+
+describe('search (issue #7)', () => {
+	beforeEach(() => {
+		addContact(db, { groupName: 'Family', location: 'Zurich' });
+		addContact(db, { groupName: 'Family', location: 'Bern' });
+		addContact(db, { groupName: 'Friends', location: 'Zurich West' });
+		addContact(db, { groupName: 'Work', location: 'Basel' });
+		addContact(db, { groupName: 'Bernese Club', location: 'Thun' });
+	});
+
+	test('matches the group or the location, ignoring case, and counts only matches', () => {
+		expect(groupCounts(db, 'zurich')).toEqual([
+			{ name: 'Family', count: 1 },
+			{ name: 'Friends', count: 1 }
+		]);
+		expect(groupCounts(db, 'BERN')).toEqual([
+			{ name: 'Bernese Club', count: 1 }, // group matches
+			{ name: 'Family', count: 1 } // location matches
+		]);
+		expect(groupCounts(db, 'fam')).toEqual([{ name: 'Family', count: 2 }]); // whole group
+	});
+
+	test('no search means everything; spaces around the search are ignored', () => {
+		expect(groupCounts(db, '').reduce((sum, group) => sum + group.count, 0)).toBe(5);
+		expect(groupCounts(db, '  zurich ')).toEqual(groupCounts(db, 'zurich'));
+		expect(countContacts(db)).toBe(5);
+	});
+
+	test('% and _ are searched literally, not as wildcards', () => {
+		addContact(db, { groupName: '100% Club', location: 'Olten' });
+		addContact(db, { groupName: 'A_B', location: 'Aarau' });
+		expect(groupCounts(db, '%').map((group) => group.name)).toEqual(['100% Club']);
+		expect(groupCounts(db, '_').map((group) => group.name)).toEqual(['A_B']);
+		expect(groupCounts(db, '\\')).toEqual([]);
+	});
+
+	test('a group keeps its name whatever the search finds in it', () => {
+		addContact(db, { groupName: 'family', location: 'Thun' }); // the group is shown as "Family"
+		expect(groupCounts(db).map((group) => group.name)).toContain('Family');
+		expect(groupCounts(db, 'thun')).toEqual([
+			{ name: 'Bernese Club', count: 1 },
+			{ name: 'Family', count: 1 } // not "family", although only that contact matches
+		]);
+	});
+
+	test('chunks of a group contain only matches, and remaining counts only matches', () => {
+		for (let i = 0; i < 5; i++) addContact(db, { groupName: 'Family', location: `Zurich ${i}` });
+		const first = sectionChunk(db, 'Family', undefined, 2, 'zurich');
+		expect(first.contacts.every((contact) => contact.location.startsWith('Zurich'))).toBe(true);
+		expect(first).toMatchObject({ more: true, remaining: 4 }); // 6 Zurich contacts in Family, 2 shown
+		expect(countInGroup(db, 'Family', undefined, 'zurich')).toBe(6);
+		expect(countInGroup(db, 'Family')).toBe(7);
+	});
+});
+
+describe('search in phone numbers and descriptions', () => {
+	test('finds the description', () => {
+		addContact(db, { groupName: 'Doctors', location: 'Zurich', phoneNumber: '555-0115', description: 'Dr. Weber, family doctor' });
+		addContact(db, { groupName: 'Work', location: 'Bern', phoneNumber: '555-0113' });
+		expect(groupCounts(db, 'weber')).toEqual([{ name: 'Doctors', count: 1 }]);
+	});
+
+	test('finds phone numbers however they are written', () => {
+		addContact(db, { groupName: 'Family', location: 'Zurich', phoneNumber: '+1 555-0101' });
+		addContact(db, { groupName: 'Work', location: 'Bern', phoneNumber: '(555) 010-0113' });
+		addContact(db, { groupName: 'Friends', location: 'Basel', phoneNumber: '555.0107' });
+		const groupsFor = (search: string) => groupCounts(db, search).map((group) => group.name);
+
+		expect(groupsFor('555-0101')).toEqual(['Family']); // as typed
+		expect(groupsFor('5550101')).toEqual(['Family']); // without separators
+		expect(groupsFor('555 0101')).toEqual(['Family']); // other separators
+		expect(groupsFor('0100113')).toEqual(['Work']); // across "(555) 010-0113"
+		expect(groupsFor('0107')).toEqual(['Friends']);
+		expect(groupsFor('555')).toEqual(['Family', 'Friends', 'Work']);
+	});
+
+	test('finds a description across its line breaks, tabs and repeated spaces', () => {
+		addContact(db, { groupName: 'Doctors', location: 'Zurich', description: 'Dr.  Weber, family doctor.\r\n\tOpen Mon–Fri.' });
+		addContact(db, { groupName: 'Work', location: 'Bern', description: 'doctor.open' });
+		const groupsFor = (search: string) => groupCounts(db, search).map((group) => group.name);
+
+		expect(groupsFor('doctor. open')).toEqual(['Doctors']); // as the list shows it, on one line
+		expect(groupsFor('dr. weber')).toEqual(['Doctors']);
+		expect(groupsFor('doctor.  open')).toEqual(['Doctors']); // the search's own spaces are collapsed too
+		expect(groupsFor('doctor.open')).toEqual(['Work']); // a missing space is not a match
+		expect(sectionChunk(db, 'Doctors', undefined, undefined, 'doctor. open').contacts).toHaveLength(1);
+	});
+
+	test('short number-like searches match as typed only', () => {
+		addContact(db, { groupName: 'Family', location: 'Zurich', phoneNumber: '+1 555-0101' });
+		addContact(db, { groupName: 'Friends', location: 'Basel', phoneNumber: '555 0141', description: '1.5 km after the bridge' });
+		addContact(db, { groupName: 'Work', location: 'Bern', phoneNumber: '+41 79 123 45 67' });
+		const groupsFor = (search: string) => groupCounts(db, search).map((group) => group.name);
+
+		expect(groupsFor('1.5')).toEqual(['Friends']); // the description, not "+1 555-0101"
+		expect(groupsFor('+41')).toEqual(['Work']); // not "555 0141"
+		expect(groupsFor('+4179')).toEqual(['Work']);
+		expect(groupsFor('4179')).toEqual(['Work']); // without the "+": still part of that number
+	});
+
+	test('a "+" in the search only finds numbers that start with it', () => {
+		addContact(db, { groupName: 'Work', location: 'Bern', phoneNumber: '+41 79 123 45 67' });
+		addContact(db, { groupName: 'Friends', location: 'Basel', phoneNumber: '555 4179' });
+		const groupsFor = (search: string) => groupCounts(db, search).map((group) => group.name);
+
+		expect(groupsFor('+4179')).toEqual(['Work']);
+		expect(groupsFor('4179')).toEqual(['Friends', 'Work']);
+	});
+
+	test('a word with a digit is not treated as a phone number', () => {
+		addContact(db, { groupName: 'Family', location: 'Zurich', phoneNumber: '+1 555-0101' });
+		addContact(db, { groupName: 'Office', location: 'Floor 1', phoneNumber: '555-0200' });
+		// "floor 1" contains letters, so its "1" doesn't match every number containing a 1.
+		expect(groupCounts(db, 'floor 1').map((group) => group.name)).toEqual(['Office']);
+	});
 });

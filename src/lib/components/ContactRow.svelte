@@ -7,10 +7,17 @@
 	// Every line is cut off with "…" rather than wrapping, so all rows have the same height: it must match
 	// --contact-row-height in app.css (lazy-loading placeholders rely on it).
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import type { Contact } from '#lib/contacts.js';
+	import { pageAction } from '#lib/forms.js';
 	import ContactDetailsDialog from './ContactDetailsDialog.svelte';
+	import Highlight from './Highlight.svelte';
 
-	let { contact, ondeleted }: { contact: Contact; ondeleted: (id: number) => void } = $props();
+	let {
+		contact,
+		search = '',
+		ondeleted
+	}: { contact: Contact; search?: string; ondeleted: (id: number) => void } = $props();
 
 	let dropdown: HTMLDivElement;
 	let menu: HTMLUListElement;
@@ -51,14 +58,14 @@
 	<div class="flex min-w-0 flex-1 flex-col md:contents">
 		<span
 			class="truncate text-lg leading-7 font-semibold tabular-nums md:order-3 md:font-mono md:text-base md:font-normal"
-			data-field="phone-number">{contact.phoneNumber}</span
+			data-field="phone-number"><Highlight text={contact.phoneNumber} {search} phoneNumber /></span
 		>
 		<span class="hidden min-w-0 md:order-1 md:block"
-			><span class="badge max-w-full badge-soft badge-md badge-primary"><span class="truncate">{contact.groupName}</span></span></span
+			><span class="badge max-w-full badge-soft badge-md badge-primary"><span class="truncate"><Highlight text={contact.groupName} {search} /></span></span></span
 		>
 		<span
 			class="min-w-0 truncate text-sm leading-6 text-base-content/70 md:order-2 md:text-base md:text-base-content"
-			data-field="location">{contact.location}</span
+			data-field="location"><Highlight text={contact.location} {search} /></span
 		>
 		<!-- Always one line, cut off with "…". It is also the details button for keyboard/screen-reader users. -->
 		<button
@@ -70,7 +77,8 @@
 			aria-haspopup="dialog"
 			aria-label="Details for {contact.phoneNumber}: {contact.description || 'No description'}"
 			title="Show all details"
-			onclick={() => detailsDialog.open()}>{contact.description || 'No description'}</button
+			onclick={() => detailsDialog.open()}
+			>{#if contact.description}<Highlight text={contact.description} {search} />{:else}No description{/if}</button
 		>
 	</div>
 
@@ -131,11 +139,15 @@
 				<form method="dialog"><button class="btn">Cancel</button></form>
 				<form
 					method="POST"
-					action="?/delete"
+					action={pageAction(page.url, 'delete')}
 					use:enhance={() =>
 						async ({ result, update }) => {
 							dialog.close();
-							await update(); // shows the banner (with Undo) and refreshes the counts
+							// Shows the banner (with Undo) and refreshes the counts. The form posts to this page with its
+							// search (pageAction), so the answer lands here. navigate: false covers the one case left: the
+							// search changed while the request ran. The answer then belongs to the page as it is now;
+							// SvelteKit 3 would otherwise go back to the URL the form was sent from.
+							await update({ navigate: false });
 							if (result.type === 'success') ondeleted(contact.id);
 						}}
 				>
@@ -148,5 +160,5 @@
 		<form method="dialog" class="modal-backdrop"><button tabindex="-1" aria-hidden="true">Close</button></form>
 	</dialog>
 
-	<ContactDetailsDialog bind:this={detailsDialog} {contact} />
+	<ContactDetailsDialog bind:this={detailsDialog} {contact} {search} />
 </li>
