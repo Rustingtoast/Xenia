@@ -169,6 +169,24 @@ export function findContact(db: Database, id: number): Contact | null {
 	return db.query<Contact, [number]>(`${SELECT_CONTACT} WHERE id = ?`).get(id);
 }
 
+/**
+ * Updates a contact's fields, keeping its id and creation time. Returns the updated contact, or
+ * null if it didn't exist. Throws ContactValidationError if the input is invalid.
+ */
+export function updateContact(db: Database, id: number, input: ContactInput): Contact | null {
+	const { values, errors } = validateContact(input);
+	if (Object.keys(errors).length > 0) throw new ContactValidationError(errors);
+
+	const now = new Date().toISOString();
+	const updated = db
+		.query<{ id: number }, (string | number)[]>(
+			`UPDATE contacts SET group_name = ?, location = ?, phone_number = ?, description = ?, updated_at = ?
+			 WHERE id = ? RETURNING id`
+		)
+		.get(values.groupName, values.location, values.phoneNumber, values.description, now, id);
+	return updated ? findContact(db, updated.id) : null;
+}
+
 /** Deletes a contact. Returns it, or null if it didn't exist. */
 export function deleteContact(db: Database, id: number): Contact | null {
 	return db.query<Contact, [number]>(

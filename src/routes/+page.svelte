@@ -190,6 +190,8 @@
 				<button class="btn btn-sm btn-success" onclick={viewCreated}>View</button>
 			{/if}
 		</div>
+	{:else if notice?.outcome === ActionOutcome.Updated}
+		<div role="status" class="mb-4 alert alert-soft alert-success">Contact saved.</div>
 	{/if}
 
 	<!-- Searches group, location, phone (separator-insensitive) and description. -->
@@ -252,6 +254,7 @@
 						count={group.count}
 						first={i === 0}
 						search={data.search}
+						onchanged={onContactChanged}
 					/>
 				{/each}
 			</div>
