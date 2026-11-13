@@ -9,7 +9,7 @@ test('delete a contact from its options menu after confirming, then undo it', as
 	const dialog = page.getByRole('dialog');
 
 	await row.getByRole('button', { name: 'Options for +1 555-0101' }).click();
-	await expect(row.locator('li.menu-disabled', { hasText: 'Edit' })).toBeVisible();
+	await expect(row.getByRole('button', { name: 'Edit' })).toBeVisible();
 	await row.getByRole('button', { name: 'Delete' }).click();
 	await expect(dialog).toContainText('Delete this contact?');
 	await dialog.getByRole('button', { name: 'Cancel' }).click();

@@ -3,22 +3,30 @@
 	// --contact-row-height in app.css (lazy-loading placeholders rely on it).
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import type { Contact } from '#lib/contacts.js';
+	import type { Contact, ContactChange } from '#lib/contacts.js';
 	import { pageAction } from '#lib/forms.js';
 	import ContactDetailsDialog from './ContactDetailsDialog.svelte';
+	import ContactFormDialog from './ContactFormDialog.svelte';
 	import Highlight from './Highlight.svelte';
 
 	let {
 		contact,
 		search = '',
-		ondeleted
-	}: { contact: Contact; search?: string; ondeleted: (id: number) => void } = $props();
+		ondeleted,
+		onchanged
+	}: {
+		contact: Contact;
+		search?: string;
+		ondeleted: (id: number) => void;
+		onchanged: (change: ContactChange) => void;
+	} = $props();
 
 	let dropdown: HTMLDivElement;
 	let menu: HTMLUListElement;
 	let dialog: HTMLDialogElement;
 	let detailsDialog: ContactDetailsDialog;
 	let el: HTMLLIElement;
+	let editDialog: ContactFormDialog;
 
 	// A click anywhere on the entry opens the details, unless it was on something with its own job:
 	// the ⋮ menu, a button, or inside one of the row's dialogs.
@@ -43,6 +51,12 @@
 		// Drop focus from the ⋮ menu first, so the focus-based dropdown closes behind the dialog.
 		(document.activeElement as HTMLElement | null)?.blur();
 		dialog.showModal();
+	}
+
+	function openEdit() {
+		// Same as confirmDelete: close the focus-based dropdown before the dialog opens.
+		(document.activeElement as HTMLElement | null)?.blur();
+		editDialog.open();
 	}
 </script>
 
@@ -101,15 +115,14 @@
 			bind:this={menu}
 			class="dropdown-content menu z-30 my-1 w-40 rounded-box bg-base-100 p-2 shadow-lg ring-1 ring-base-content/10"
 		>
-			<!-- Placeholder: editing is not built yet. -->
-			<li class="menu-disabled" title="Coming soon">
-				<span aria-disabled="true">
+			<li>
+				<button type="button" onclick={openEdit}>
 					<svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
 					</svg>
 					Edit
-				</span>
+				</button>
 			</li>
 			<li>
 				<button type="button" class="text-error" onclick={confirmDelete}>
@@ -158,4 +171,5 @@
 	</dialog>
 
 	<ContactDetailsDialog bind:this={detailsDialog} {contact} {search} />
+	<ContactFormDialog bind:this={editDialog} {contact} {onchanged} />
 </li>

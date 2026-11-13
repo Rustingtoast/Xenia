@@ -12,6 +12,7 @@ import {
 	groupCounts,
 	listPosition,
 	sectionChunk,
+	updateContact,
 	validateContact
 } from './contacts.js';
 import { addContact, testDatabase } from './test-helpers.js';
@@ -93,6 +94,50 @@ test('deleteContact returns the deleted contact, or null', () => {
 	expect(deleteContact(db, contact.id)).toEqual(contact);
 	expect(findContact(db, contact.id)).toBeNull();
 	expect(deleteContact(db, contact.id)).toBeNull();
+});
+
+describe('updateContact', () => {
+	test('updates the fields, keeps created_at and bumps updated_at', () => {
+		const contact = addContact(db, { groupName: 'Family', location: 'Bern', phoneNumber: '555 0101', description: 'Old' });
+		const updated = updateContact(db, contact.id, {
+			groupName: 'Work',
+			location: 'Zurich',
+			phoneNumber: '555 0102',
+			description: 'New'
+		});
+		expect(updated).toMatchObject({
+			id: contact.id,
+			groupName: 'Work',
+			location: 'Zurich',
+			phoneNumber: '555 0102',
+			description: 'New',
+			createdAt: contact.createdAt
+		});
+		expect(updated!.updatedAt >= contact.updatedAt).toBe(true);
+		expect(findContact(db, contact.id)).toEqual(updated);
+	});
+
+	test('normalizes the input like createContact', () => {
+		const contact = addContact(db);
+		const updated = updateContact(db, contact.id, {
+			groupName: '  Work  ',
+			location: ' New  York ',
+			phoneNumber: ' 555   0101 '
+		});
+		expect(updated).toMatchObject({ groupName: 'Work', location: 'New York', phoneNumber: '555 0101' });
+	});
+
+	test('refuses invalid input and leaves the contact untouched', () => {
+		const contact = addContact(db);
+		expect(() => updateContact(db, contact.id, { groupName: '', location: 'Bern', phoneNumber: '555 0101' })).toThrow(
+			ContactValidationError
+		);
+		expect(findContact(db, contact.id)).toEqual(contact);
+	});
+
+	test('returns null for a contact that does not exist', () => {
+		expect(updateContact(db, 999, { groupName: 'Work', location: 'Bern', phoneNumber: '555 0101' })).toBeNull();
+	});
 });
 
 test('groupCounts lists every group with its count in order, "family" and "Family" being one group', () => {

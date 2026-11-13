@@ -4,7 +4,9 @@ import {
 	countContacts,
 	createContact,
 	deleteContact,
+	findContact,
 	groupCounts,
+	updateContact,
 	validateContact,
 	type ContactInput
 } from '#lib/server/contacts.js';
@@ -70,6 +72,35 @@ export const actions: Actions = {
 		return {
 			outcome: ActionOutcome.Created as const,
 			change: { id: contact.id, groupName: contact.groupName } satisfies ContactChange
+		};
+	},
+
+	// The "Edit contact" dialog. Saves the new fields; the page moves the row if its group changed.
+	update: async ({ request }) => {
+		const data = await request.formData();
+		const id = Number(data.get('id'));
+		if (!Number.isInteger(id)) return fail(404, { outcome: ActionOutcome.NotFound as const });
+
+		const input: ContactInput = {
+			groupName: String(data.get('groupName') ?? ''),
+			location: String(data.get('location') ?? ''),
+			phoneNumber: String(data.get('phoneNumber') ?? ''),
+			description: String(data.get('description') ?? '')
+		};
+		const { values, errors } = validateContact(input);
+		if (Object.keys(errors).length > 0) return fail(400, { errors });
+
+		const previous = findContact(getDb(), id);
+		if (!previous) return fail(404, { outcome: ActionOutcome.NotFound as const });
+
+		const contact = updateContact(getDb(), id, values)!;
+		return {
+			outcome: ActionOutcome.Updated as const,
+			change: {
+				id: contact.id,
+				groupName: contact.groupName,
+				previousGroupName: previous.groupName
+			} satisfies ContactChange
 		};
 	}
 };

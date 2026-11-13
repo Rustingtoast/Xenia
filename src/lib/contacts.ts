@@ -15,13 +15,14 @@ export type Contact = {
 /** A group in the side bar and list: its name and how many contacts it has. */
 export type GroupCount = { name: string; count: number };
 
-/** What a delete/undo/create form action did. The list page shows a banner for it. */
+/** What a delete/undo/create/edit form action did. The list page shows a banner for it. */
 export enum ActionOutcome {
 	Deleted = 'deleted',
 	NotFound = 'not-found',
 	Restored = 'restored',
 	RestoreFailed = 'restore-failed',
-	Created = 'created'
+	Created = 'created',
+	Updated = 'updated'
 }
 
 /**
