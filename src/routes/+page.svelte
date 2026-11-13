@@ -2,9 +2,10 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { untrack } from 'svelte';
-	import { ActionOutcome, SEARCH_MAX_LENGTH, groupKey, normalizeSearch } from '#lib/contacts.js';
+	import { untrack, tick } from 'svelte';
+	import { ActionOutcome, SEARCH_MAX_LENGTH, groupKey, normalizeSearch, type ContactChange } from '#lib/contacts.js';
 	import { pageAction } from '#lib/forms.js';
+	import ContactFormDialog from '#lib/components/ContactFormDialog.svelte';
 	import GroupSection from '#lib/components/GroupSection.svelte';
 	import type { PageProps } from './$types';
 
@@ -19,6 +20,33 @@
 
 	/** The mounted group sections by groupKey, to remove/reload rows after delete and undo. */
 	const sections: Record<string, GroupSection> = $state({});
+
+	let newContactDialog: ContactFormDialog;
+	/** The last created contact, for the "View" button in the "Contact added." banner. */
+	let created = $state<ContactChange | null>(null);
+
+	/** After a create or edit: make the changed group(s) show the contact in its (new) place. */
+	function onContactChanged(change: ContactChange) {
+		const newKey = groupKey(change.groupName);
+		const oldKey = change.previousGroupName ? groupKey(change.previousGroupName) : newKey;
+		// A moved contact disappears from its old section; the section is gone when the contact was its last.
+		if (oldKey !== newKey) sections[oldKey]?.remove(change.id);
+		// An existing section reloads; a brand-new group loads itself once it is rendered.
+		sections[newKey]?.reload();
+	}
+
+	/** The "View" button: scroll to the new contact and open its details. */
+	async function viewCreated() {
+		if (!created) return;
+		const key = groupKey(created.groupName);
+		if (!sections[key]) {
+			// The new contact's group is hidden by the active search; clear it so the section appears.
+			searchText = '';
+			await applySearch('');
+			await tick(); // let the new section mount before revealing
+		}
+		await sections[key]?.reveal(created.id);
+	}
 
 	const groupKeys = $derived(new Set(data.groups.map((group) => groupKey(group.name))));
 	/** True while an Undo request is running: the button is disabled so a double tap can't restore twice. */
@@ -114,8 +142,7 @@
 				{/if}
 			</p>
 		</div>
-		<!-- Placeholder: the "new contact" form is not built yet. -->
-		<button type="button" class="btn btn-primary" disabled>+ New</button>
+		<button type="button" class="btn btn-primary" onclick={() => newContactDialog.open()}>+ New</button>
 	</div>
 
 	{#if notice?.outcome === ActionOutcome.Deleted}
@@ -156,6 +183,13 @@
 		<div role="status" class="mb-4 alert alert-soft alert-success">Contact restored.</div>
 	{:else if notice?.outcome === ActionOutcome.RestoreFailed}
 		<div role="alert" class="mb-4 alert alert-soft alert-warning">This contact can no longer be restored.</div>
+	{:else if notice?.outcome === ActionOutcome.Created}
+		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
+			<span>Contact added.</span>
+			{#if created}
+				<button class="btn btn-sm btn-success" onclick={viewCreated}>View</button>
+			{/if}
+		</div>
 	{/if}
 
 	<!-- Searches group, location, phone (separator-insensitive) and description. -->
@@ -224,3 +258,11 @@
 		{/if}
 	</div>
 </div>
+
+<ContactFormDialog
+	bind:this={newContactDialog}
+	onchanged={(change) => {
+		created = change;
+		onContactChanged(change);
+	}}
+/>

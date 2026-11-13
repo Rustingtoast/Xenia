@@ -15,13 +15,24 @@ export type Contact = {
 /** A group in the side bar and list: its name and how many contacts it has. */
 export type GroupCount = { name: string; count: number };
 
-/** What a delete/undo form action did. The list page shows a banner for it. */
+/** What a delete/undo/create form action did. The list page shows a banner for it. */
 export enum ActionOutcome {
 	Deleted = 'deleted',
 	NotFound = 'not-found',
 	Restored = 'restored',
-	RestoreFailed = 'restore-failed'
+	RestoreFailed = 'restore-failed',
+	Created = 'created'
 }
+
+/**
+ * A contact after a create or edit, for the page to refresh the list around it.
+ * `previousGroupName` is only set by edits, so the page knows where the contact moved from.
+ */
+export type ContactChange = {
+	id: number;
+	groupName: string;
+	previousGroupName?: string;
+};
 
 /** How far a group section of the list has loaded its contacts. */
 export enum SectionLoadState {
