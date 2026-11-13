@@ -23,6 +23,8 @@
 	/** Bumped by reload(), so answers to requests from before a reload are ignored. */
 	let generation = $state(0);
 	let loading = false;
+	/** The mounted rows by contact id, so a contact can be scrolled to and its details opened. */
+	const rows: Record<number, ContactRow> = $state({});
 
 	const placeholderRows = $derived(loadState === SectionLoadState.NotStarted ? count : remaining);
 
@@ -65,6 +67,22 @@
 		contacts = contacts.filter((contact) => contact.id !== id);
 	}
 
+	/**
+	 * Loads chunks until the contact's row is fetched (or the section is fully loaded or failed),
+	 * then scrolls it into view and opens its details. Used by the "View" button after creating.
+	 */
+	export async function reveal(id: number) {
+		while (!contacts.some((contact) => contact.id === id) && loadState !== SectionLoadState.Complete && !failed) {
+			if (loading) {
+				// A scroll-triggered load is already running; wait for it to finish before the next chunk.
+				await new Promise((resolve) => setTimeout(resolve, 20));
+			} else {
+				await loadMore();
+			}
+		}
+		rows[id]?.reveal();
+	}
+
 	// Calls loadMore when the element comes within 300px of the screen.
 	function loadWhenVisible(node: HTMLElement) {
 		const observer = new IntersectionObserver((entries) => {
@@ -88,7 +106,7 @@
 	</h2>
 	<ul>
 		{#each contacts as contact (contact.id)}
-			<ContactRow {contact} {search} ondeleted={remove} />
+			<ContactRow bind:this={rows[contact.id]} {contact} {search} ondeleted={remove} />
 		{/each}
 	</ul>
 	{#if loadState !== SectionLoadState.Complete}

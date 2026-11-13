@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { untrack } from 'svelte';
+	import { untrack, tick } from 'svelte';
 	import { ActionOutcome, SEARCH_MAX_LENGTH, groupKey, normalizeSearch, type ContactChange } from '#lib/contacts.js';
 	import { pageAction } from '#lib/forms.js';
 	import ContactFormDialog from '#lib/components/ContactFormDialog.svelte';
@@ -22,6 +22,8 @@
 	const sections: Record<string, GroupSection> = $state({});
 
 	let newContactDialog: ContactFormDialog;
+	/** The last created contact, for the "View" button in the "Contact added." banner. */
+	let created = $state<ContactChange | null>(null);
 
 	/** After a create or edit: make the changed group(s) show the contact in its (new) place. */
 	function onContactChanged(change: ContactChange) {
@@ -31,6 +33,19 @@
 		if (oldKey !== newKey) sections[oldKey]?.remove(change.id);
 		// An existing section reloads; a brand-new group loads itself once it is rendered.
 		sections[newKey]?.reload();
+	}
+
+	/** The "View" button: scroll to the new contact and open its details. */
+	async function viewCreated() {
+		if (!created) return;
+		const key = groupKey(created.groupName);
+		if (!sections[key]) {
+			// The new contact's group is hidden by the active search; clear it so the section appears.
+			searchText = '';
+			await applySearch('');
+			await tick(); // let the new section mount before revealing
+		}
+		await sections[key]?.reveal(created.id);
 	}
 
 	const groupKeys = $derived(new Set(data.groups.map((group) => groupKey(group.name))));
@@ -169,7 +184,12 @@
 	{:else if notice?.outcome === ActionOutcome.RestoreFailed}
 		<div role="alert" class="mb-4 alert alert-soft alert-warning">This contact can no longer be restored.</div>
 	{:else if notice?.outcome === ActionOutcome.Created}
-		<div role="status" class="mb-4 alert alert-soft alert-success">Contact added.</div>
+		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
+			<span>Contact added.</span>
+			{#if created}
+				<button class="btn btn-sm btn-success" onclick={viewCreated}>View</button>
+			{/if}
+		</div>
 	{/if}
 
 	<!-- Searches group, location, phone (separator-insensitive) and description. -->
@@ -239,4 +259,10 @@
 	</div>
 </div>
 
-<ContactFormDialog bind:this={newContactDialog} onchanged={onContactChanged} />
+<ContactFormDialog
+	bind:this={newContactDialog}
+	onchanged={(change) => {
+		created = change;
+		onContactChanged(change);
+	}}
+/>

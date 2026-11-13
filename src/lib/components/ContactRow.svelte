@@ -18,11 +18,18 @@
 	let menu: HTMLUListElement;
 	let dialog: HTMLDialogElement;
 	let detailsDialog: ContactDetailsDialog;
+	let el: HTMLLIElement;
 
 	// A click anywhere on the entry opens the details, unless it was on something with its own job:
 	// the ⋮ menu, a button, or inside one of the row's dialogs.
 	function openDetailsFromRow(event: MouseEvent) {
 		if ((event.target as Element).closest('a, button, [role="button"], .dropdown, dialog')) return;
+		detailsDialog.open();
+	}
+
+	/** Scroll this row into view and open its details (the "View" button after creating a contact). */
+	export function reveal() {
+		el.scrollIntoView({ block: 'center' });
 		detailsDialog.open();
 	}
 
@@ -43,6 +50,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <li
 	id="contact_{contact.id}"
+	bind:this={el}
 	class="flex cursor-pointer items-center gap-2 border-t border-base-content/5 px-4 py-3 transition-colors hover:bg-base-200/50 md:grid md:grid-cols-[1fr_1fr_minmax(11rem,1fr)_1.5fr_2rem] md:gap-4"
 	onclick={openDetailsFromRow}
 >

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SECTION_CHUNK_SIZE } from '../src/lib/contacts.ts';
 import { setContacts } from './support.ts';
 
 test('creating a contact adds it to a new group and updates the count', async ({ page }) => {
@@ -58,3 +59,51 @@ test('the form shows validation errors and keeps the dialog open', async ({ page
 
 	await expect(page.locator('#contact-count')).toHaveText('4 contacts');
 });
+
+test('the "View" button scrolls to the new contact and opens its details', async ({ page }) => {
+	setContacts();
+	await page.goto('/');
+
+	await page.getByRole('button', { name: '+ New' }).click();
+	const dialog = page.getByRole('dialog', { name: 'New contact' });
+	await dialog.getByLabel('Group').fill('Doctors');
+	await dialog.getByLabel('Location').fill('Zurich');
+	await dialog.getByLabel('Phone number').fill('555 0115');
+	await dialog.getByLabel('Description').fill('Dr. Weber');
+	await dialog.getByRole('button', { name: 'Add' }).click();
+
+	const banner = page.getByRole('status');
+	await expect(banner).toContainText('Contact added.');
+	await banner.getByRole('button', { name: 'View' }).click();
+
+	const details = page.getByRole('dialog', { name: 'Contact details' });
+	await expect(details).toBeVisible();
+	await expect(details.locator('[data-field="phone-number"]')).toHaveText('555 0115');
+	await expect(details.locator('[data-field="description"]')).toHaveText('Dr. Weber');
+});
+
+test('the "View" button finds a new contact beyond the first lazy-loaded chunk', async ({ page }) => {
+	// 100 "City" contacts, then a new one whose location sorts last: it lands in the second chunk.
+	setContacts(
+		Array.from({ length: SECTION_CHUNK_SIZE }, (_, i) => ({
+			groupName: 'Family',
+			location: `City ${String(i).padStart(3, '0')}`,
+			phoneNumber: `555 ${1000 + i}`
+		}))
+	);
+	await page.goto('/');
+
+	await page.getByRole('button', { name: '+ New' }).click();
+	const dialog = page.getByRole('dialog', { name: 'New contact' });
+	await dialog.getByLabel('Group').fill('Family');
+	await dialog.getByLabel('Location').fill('Zzz');
+	await dialog.getByLabel('Phone number').fill('555 9999');
+	await dialog.getByRole('button', { name: 'Add' }).click();
+
+	await page.getByRole('status').getByRole('button', { name: 'View' }).click();
+
+	const details = page.getByRole('dialog', { name: 'Contact details' });
+	await expect(details).toBeVisible();
+	await expect(details.locator('[data-field="phone-number"]')).toHaveText('555 9999');
+});
+
