@@ -1,6 +1,13 @@
 import { fail } from '@sveltejs/kit';
-import { ActionOutcome, normalizeSearch } from '#lib/contacts.js';
-import { countContacts, deleteContact, groupCounts } from '#lib/server/contacts.js';
+import { ActionOutcome, normalizeSearch, type ContactChange } from '#lib/contacts.js';
+import {
+	countContacts,
+	createContact,
+	deleteContact,
+	groupCounts,
+	validateContact,
+	type ContactInput
+} from '#lib/server/contacts.js';
 import { getDb } from '#lib/server/db.js';
 import { appSecret } from '#lib/server/secret.js';
 import { createUndoToken, restoreFromUndoToken } from '#lib/server/undo.js';
@@ -45,5 +52,24 @@ export const actions: Actions = {
 		if (!contact) return fail(410, { outcome: ActionOutcome.RestoreFailed as const });
 
 		return { outcome: ActionOutcome.Restored as const, restored: { id: contact.id, groupName: contact.groupName } };
+	},
+
+	// The "New contact" dialog. Creates a contact and tells the page where it landed.
+	create: async ({ request }) => {
+		const data = await request.formData();
+		const input: ContactInput = {
+			groupName: String(data.get('groupName') ?? ''),
+			location: String(data.get('location') ?? ''),
+			phoneNumber: String(data.get('phoneNumber') ?? ''),
+			description: String(data.get('description') ?? '')
+		};
+		const { values, errors } = validateContact(input);
+		if (Object.keys(errors).length > 0) return fail(400, { errors });
+
+		const contact = createContact(getDb(), values);
+		return {
+			outcome: ActionOutcome.Created as const,
+			change: { id: contact.id, groupName: contact.groupName } satisfies ContactChange
+		};
 	}
 };
