@@ -58,6 +58,12 @@
 		(document.activeElement as HTMLElement | null)?.blur();
 		editDialog.open();
 	}
+
+	// The details dialog's edit button: switch from viewing to editing.
+	function editFromDetails() {
+		detailsDialog.close();
+		editDialog.open();
+	}
 </script>
 
 <!-- Click is a convenience; keyboard/screen-reader users have the details button below. -->
@@ -170,6 +176,6 @@
 		<form method="dialog" class="modal-backdrop"><button tabindex="-1" aria-hidden="true">Close</button></form>
 	</dialog>
 
-	<ContactDetailsDialog bind:this={detailsDialog} {contact} {search} />
+	<ContactDetailsDialog bind:this={detailsDialog} {contact} {search} onedit={editFromDetails} />
 	<ContactFormDialog bind:this={editDialog} {contact} {onchanged} />
 </li>
