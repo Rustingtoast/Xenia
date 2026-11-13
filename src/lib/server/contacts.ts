@@ -1,5 +1,14 @@
 import type { Database } from 'bun:sqlite';
-import { SECTION_CHUNK_SIZE, type Contact, type GroupCount } from '../contacts.js';
+import {
+	PHONE_FORMAT,
+	PHONE_SEPARATORS,
+	SECTION_CHUNK_SIZE,
+	SPACE_LIKE,
+	compactPhoneSearch,
+	normalizeSearch,
+	type Contact,
+	type GroupCount
+} from '../contacts.js';
 
 /** What a user enters for a contact. */
 export type ContactInput = { groupName: string; location: string; phoneNumber: string; description?: string };
@@ -19,9 +28,6 @@ export class ContactValidationError extends Error {
 /** A contact's place in its group's list order: [location, phone, id]. Chunks continue after one. */
 export type ListPosition = [string, string, number];
 
-// Digits plus the separators people actually type: "+41 79 123 45 67", "(555) 010-0199", "044/123.45.67".
-const PHONE_FORMAT = /^\+?[0-9 ()./-]+$/;
-
 const SELECT_CONTACT = `
 	SELECT id, group_name AS groupName, location, phone_number AS phoneNumber, description,
 	       created_at AS createdAt, updated_at AS updatedAt
@@ -31,6 +37,69 @@ const SELECT_CONTACT = `
 // exactly the contacts_group_order index (+ the row id).
 const GROUP_ORDER = 'ORDER BY location, phone_number, id';
 const AFTER_POSITION = '(location, phone_number, id) > (?, ?, ?)';
+
+/** A character as an SQL expression, e.g. char(10) for a line break: nothing to quote or escape. */
+const sqlChar = (char: string) => `char(${char.charCodeAt(0)})`;
+
+// The description as the list shows it on one line: every run of spaces, tabs and line breaks is one space.
+// Descriptions are stored as typed, but a search must be able to span a line break ("doctor. open").
+const DESCRIPTION_ONE_LINE = (() => {
+	// 1. Tabs and line breaks become spaces.
+	const spaced = SPACE_LIKE.reduce((sql, char) => `REPLACE(${sql}, ${sqlChar(char)}, ' ')`, 'description');
+	// 2. Runs of spaces become one space: every space becomes "<>", every "><" (two spaces in a row) is
+	//    dropped, and what is left of "<>" becomes a space again. Two of the characters replaced in step 1
+	//    serve as "<" and ">": after it the text has none of its own.
+	const [open, close] = SPACE_LIKE.map(sqlChar);
+	return `REPLACE(REPLACE(REPLACE(${spaced}, ' ', ${open} || ${close}), ${close} || ${open}, ''), ${open} || ${close}, ' ')`;
+})();
+// Search: the text appears in any of these fields. LIKE ignores A–Z case, like NOCASE.
+const SEARCHED_FIELDS = ['group_name', 'location', 'phone_number', DESCRIPTION_ONE_LINE];
+// The phone number without its separators, so "5550101" finds "+1 555-0101" (see compactPhoneSearch).
+const PHONE_COMPACT = PHONE_SEPARATORS.reduce((sql, char) => `REPLACE(${sql}, ${sqlChar(char)}, '')`, 'phone_number');
+
+/** LIKE pattern for "contains", with %, _ and \ in the search taken literally. */
+function containsPattern(search: string): string {
+	return `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
+/**
+ * "This contact matches the search" as an SQL condition; null without a search. The one definition behind
+ * every list query, so counts, chunks and "remaining" always agree.
+ */
+function searchCondition(search: string): { sql: string; params: string[] } | null {
+	const text = normalizeSearch(search);
+	if (!text) return null;
+	const matches = SEARCHED_FIELDS.map((field) => `${field} LIKE ? ESCAPE '\\'`);
+	const params = SEARCHED_FIELDS.map(() => containsPattern(text));
+	const compact = compactPhoneSearch(text);
+	if (compact) {
+		matches.push(`${PHONE_COMPACT} LIKE ?`);
+		params.push(`%${compact}%`); // digits and "+" only: nothing to escape
+	}
+	return { sql: `(${matches.join(' OR ')})`, params };
+}
+
+/**
+ * The WHERE clause of the chunk queries: one group, optionally only contacts after a list position and/or
+ * matching a search.
+ */
+function listFilter(filter: { groupName: string; after?: ListPosition; search?: string }): {
+	where: string;
+	params: (string | number)[];
+} {
+	const conditions = ['group_name = ?'];
+	const params: (string | number)[] = [filter.groupName];
+	if (filter.after) {
+		conditions.push(AFTER_POSITION);
+		params.push(...filter.after);
+	}
+	const matching = searchCondition(filter.search ?? '');
+	if (matching) {
+		conditions.push(matching.sql);
+		params.push(...matching.params);
+	}
+	return { where: `WHERE ${conditions.join(' AND ')}`, params };
+}
 
 /** Trims and collapses repeated spaces: "  New   York " → "New York". */
 export function normalize(value: string): string {
@@ -111,15 +180,24 @@ export function deleteContact(db: Database, id: number): Contact | null {
 
 /**
  * Every group with its number of contacts, in list order: [{ name: "Doctors", count: 2 }, …].
+ * With a search, only groups with matching contacts, counting only those.
  * "family" and "Family" are one group (NOCASE); the name shown is the capitalized spelling if any.
  */
-export function groupCounts(db: Database): GroupCount[] {
+export function groupCounts(db: Database, search = ''): GroupCount[] {
+	const matching = searchCondition(search);
+	// The search only decides what is counted (a condition is 1 or 0), not which rows are read: the name
+	// comes from all contacts of a group, so a group isn't called "family" in one search and "Family" in another.
 	return db
-		.query<GroupCount, []>(
-			`SELECT MIN(group_name COLLATE BINARY) AS name, COUNT(*) AS count
-			 FROM contacts GROUP BY group_name ORDER BY group_name`
+		.query<GroupCount, string[]>(
+			`SELECT MIN(group_name COLLATE BINARY) AS name, ${matching ? `SUM(${matching.sql})` : 'COUNT(*)'} AS count
+			 FROM contacts GROUP BY group_name HAVING count > 0 ORDER BY group_name`
 		)
-		.all();
+		.all(...(matching?.params ?? []));
+}
+
+/** Number of contacts in the whole phone book. */
+export function countContacts(db: Database): number {
+	return db.query<{ n: number }, []>('SELECT COUNT(*) AS n FROM contacts').get()!.n;
 }
 
 /** A contact's place in its group's list order, for continuing a section after it. */
@@ -128,31 +206,31 @@ export function listPosition(contact: Contact): ListPosition {
 }
 
 /**
- * One chunk of a group's contacts in list order, continuing after `after` (from the start if omitted).
+ * One chunk of a group's contacts in list order, continuing after `after` (from the start if omitted),
+ * optionally only those matching `search`.
  * Continuing "after X" rather than "skip N" means deleting a contact never shifts the next chunk
- * and hides someone. `remaining` counts the contacts after this chunk.
+ * and hides someone. `remaining` counts the (matching) contacts after this chunk.
  */
 export function sectionChunk(
 	db: Database,
 	groupName: string,
 	after?: ListPosition,
-	limit = SECTION_CHUNK_SIZE
+	limit = SECTION_CHUNK_SIZE,
+	search = ''
 ): { contacts: Contact[]; more: boolean; remaining: number } {
-	const where = after ? `WHERE group_name = ? AND ${AFTER_POSITION}` : 'WHERE group_name = ?';
-	const params = after ? [groupName, ...after] : [groupName];
+	const { where, params } = listFilter({ groupName, after, search });
 	const rows = db
 		.query<Contact, (string | number)[]>(`${SELECT_CONTACT} ${where} ${GROUP_ORDER} LIMIT ?`)
 		.all(...params, limit + 1);
 	const contacts = rows.slice(0, limit);
 	const more = rows.length > limit;
-	const remaining = more ? countInGroup(db, groupName, listPosition(contacts.at(-1)!)) : 0;
+	const remaining = more ? countInGroup(db, groupName, listPosition(contacts.at(-1)!), search) : 0;
 	return { contacts, more, remaining };
 }
 
-/** Contacts in a group, optionally only those after a list position. */
-export function countInGroup(db: Database, groupName: string, after?: ListPosition): number {
-	const where = after ? `WHERE group_name = ? AND ${AFTER_POSITION}` : 'WHERE group_name = ?';
-	const params = after ? [groupName, ...after] : [groupName];
+/** Contacts in a group, optionally only those after a list position and/or matching a search. */
+export function countInGroup(db: Database, groupName: string, after?: ListPosition, search = ''): number {
+	const { where, params } = listFilter({ groupName, after, search });
 	return db.query<{ n: number }, (string | number)[]>(`SELECT COUNT(*) AS n FROM contacts ${where}`).get(...params)!.n;
 }
 

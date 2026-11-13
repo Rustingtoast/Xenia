@@ -1,12 +1,18 @@
 <script lang="ts">
-	// One group: a sticky heading plus its contacts, loaded lazily in chunks
-	// (GET /contacts/group?name=…) when the placeholder below the loaded rows comes into view.
-	// The placeholder reserves the height of the rows still to come, so the page doesn't jump
-	// while loading and the side index lands on the right spot.
+	// One group: sticky heading plus its contacts, lazy-loaded in chunks as the placeholder below scrolls
+	// into view. The placeholder reserves the height still to come, so the page doesn't jump.
 	import { SectionLoadState, sectionId, type Contact, type SectionChunkResponse } from '#lib/contacts.js';
 	import ContactRow from './ContactRow.svelte';
+	import Highlight from './Highlight.svelte';
 
-	let { name, count, first = false }: { name: string; count: number; first?: boolean } = $props();
+	// `search`: only matching contacts are loaded, and matches are highlighted. The page gives every search its
+	// own sections (keyed on it), so a section never mixes results of two searches.
+	let {
+		name,
+		count,
+		first = false,
+		search = ''
+	}: { name: string; count: number; first?: boolean; search?: string } = $props();
 
 	let contacts = $state<Contact[]>([]);
 	let loadState = $state<SectionLoadState>(SectionLoadState.NotStarted);
@@ -27,6 +33,7 @@
 		const started = generation;
 		const query = new URLSearchParams({ name });
 		if (next) query.set('after', next);
+		if (search) query.set('q', search);
 		try {
 			const response = await fetch(`/contacts/group?${query}`);
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -77,11 +84,11 @@
 			first && 'rounded-t-box md:rounded-none'
 		]}
 	>
-		{name}
+		<Highlight text={name} {search} />
 	</h2>
 	<ul>
 		{#each contacts as contact (contact.id)}
-			<ContactRow {contact} ondeleted={remove} />
+			<ContactRow {contact} {search} ondeleted={remove} />
 		{/each}
 	</ul>
 	{#if loadState !== SectionLoadState.Complete}

@@ -12,7 +12,7 @@ import { DEVELOPMENT_DATABASE_PATH, databasePath, openDatabase } from '../src/li
 
 // Fictional sample contacts for local development and manual testing.
 // Phone numbers use the 555-01xx range, which is reserved for fiction, and mix
-// formats on purpose so search (issue #7) and display can be tried against them.
+// formats on purpose so search and display can be tried against them.
 // [group, location, phone, description?] – some descriptions are long or multi-line on purpose,
 // to try the cropping and the "full description" dialog; some contacts have none.
 const SAMPLE_CONTACTS: [string, string, string, string?][] = [

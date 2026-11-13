@@ -11,15 +11,13 @@
 	--breakpoint-docked: 86rem;
 }
 
-/* The sticky search bar on the list page (input 2.5rem + py-2), measured. Group headings stick right below
-   it (top bar 4rem + this), and jumping to a group stops there too (GroupSection.svelte). */
+/* Sticky search bar height, measured (input 2.5rem + py-2); group headings stick right below it. */
 :root {
 	--search-bar-height: 3.5rem;
 	--list-sticky-top: calc(4rem + var(--search-bar-height));
 }
 
-/* Height of one contact row in the list (ContactRow.svelte). Lazy-loading placeholders reserve
-   rows × this, so keep it in sync with the real row height on phones and on wider screens. */
+/* One contact row's height; lazy-loading placeholders reserve rows × this, so keep it in sync. */
 :root {
 	--contact-row-height: 6.0625rem; /* 97px, measured (3 lines: number, location, description) */
 	@media (width >= 48rem) {
@@ -27,10 +25,8 @@
 	}
 }
 
-/* Soft banners (daisyUI `alert alert-soft alert-*`): daisyUI colours their text with the plain alert colour,
-   which is hard to read in light mode (yellow/green text ≈ 1.7–1.9:1). Mixing it with the normal text colour
-   keeps the hue but makes it readable in every variant and both themes (≈ 5.5:1 light, ≈ 7:1 dark).
-   Unlayered CSS, so it wins over daisyUI's layered styles without !important. */
+/* Soft banners: daisyUI's alert-soft text is low-contrast in light mode; mix it with the normal text colour
+   for readable text in both themes. Unlayered so it wins over daisyUI's layered styles. */
 .alert-soft {
 	color: color-mix(in oklab, var(--alert-color, var(--color-base-content)) 45%, var(--color-base-content));
 }
@@ -41,8 +37,20 @@
 	--alert-border-color: color-mix(in oklab, var(--color-success) 40%, transparent);
 }
 
-/* Green buttons on a green banner (the Undo button): an edge in the text colour mixed with green, so the button
-   stands out from the banner in light mode too (WCAG 1.4.11 asks 3:1 for a control's boundary). */
+/* The Undo button: a border in the text colour mixed with green, so it stands out on the green banner (WCAG 3:1). */
 .alert-soft.alert-success .btn-success {
 	border-color: color-mix(in oklab, var(--color-success) 45%, var(--color-base-content));
+}
+
+/* Search matches (Highlight.svelte): warm marker, normal text colour so it stays readable in both themes. */
+.search-match {
+	background-color: color-mix(in oklab, var(--color-warning) 45%, transparent);
+	color: var(--color-base-content);
+	border-radius: 0.2em;
+	padding-inline: 0.05em;
+}
+
+/* Hide the browser's own search clear button (we have our own). */
+input[type='search']::-webkit-search-cancel-button {
+	appearance: none;
 }
