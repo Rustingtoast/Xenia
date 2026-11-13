@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { rowSelector, setContacts } from './support.ts';
+import { rowField, rowSelector, setContacts } from './support.ts';
 
 test('editing a contact updates its fields in place and shows a saved banner', async ({ page }) => {
 	const [family] = setContacts();
@@ -74,4 +74,21 @@ test('the edit form shows validation errors and keeps the dialog open', async ({
 	await expect(dialog).toBeVisible();
 	await expect(dialog.getByText('may only contain digits, spaces, + ( ) . / -')).toBeVisible();
 	await expect(page.locator('#contact-count')).toHaveText('4 contacts');
+});
+
+test('the details dialog has an edit button that opens the edit form', async ({ page }) => {
+	const [family] = setContacts();
+	await page.goto('/');
+	const row = page.locator(rowSelector(family));
+
+	await row.locator(rowField('phone-number')).click();
+	const details = page.getByRole('dialog', { name: 'Contact details' });
+	await expect(details).toBeVisible();
+
+	await details.getByRole('button', { name: 'Edit +1 555-0101' }).click();
+
+	const editDialog = page.getByRole('dialog', { name: 'Edit contact' });
+	await expect(editDialog).toBeVisible();
+	await expect(editDialog.getByLabel('Group')).toHaveValue('Family');
+	await expect(editDialog.getByLabel('Phone number')).toHaveValue('+1 555-0101');
 });

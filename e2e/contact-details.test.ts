@@ -34,7 +34,8 @@ for (const [screen, viewport] of [
 		await expect(dialog.locator(`[data-field="${ContactField.Group}"]`)).toHaveText('Doctors');
 		await expect(dialog.locator(`[data-field="${ContactField.Description}"]`)).toHaveText(LONG_DESCRIPTION);
 		await expect(dialog.getByRole('link')).toHaveCount(0); // no "Call": Xenia doesn't dial numbers
-		await expect(dialog.getByRole('button')).toHaveText(['Close']);
+		await expect(dialog.getByRole('button', { name: /^Edit / })).toBeVisible(); // edit affordance
+		await expect(dialog.getByRole('button')).toHaveCount(2); // Edit and Close, nothing else
 
 		await dialog.getByRole('button', { name: 'Close' }).click();
 		await expect(dialog).toBeHidden();

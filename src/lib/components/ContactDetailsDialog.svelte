@@ -6,7 +6,11 @@
 	import Highlight from './Highlight.svelte';
 
 	// `search`: the list's current search; its matches are highlighted here too.
-	let { contact, search = '' }: { contact: Contact; search?: string } = $props();
+	let {
+		contact,
+		search = '',
+		onedit
+	}: { contact: Contact; search?: string; onedit: () => void } = $props();
 
 	let dialog: HTMLDialogElement;
 	// Every row has its own dialog and most are never opened: the content is only rendered once it is.
@@ -17,12 +21,31 @@
 		await tick(); // the content must be there first: the dialog focuses its Close button when it opens
 		dialog.showModal();
 	}
+
+	/** Closes the dialog (the "Edit" button switches to the edit dialog instead). */
+	export function close() {
+		dialog.close();
+	}
 </script>
 
 <dialog bind:this={dialog} class="modal modal-bottom sm:modal-middle" aria-labelledby="contact_{contact.id}_details_title">
 	{#if opened}
 		<div class="modal-box">
-			<h3 id="contact_{contact.id}_details_title" class="text-lg font-bold">Contact details</h3>
+			<div class="flex items-center justify-between gap-2">
+				<h3 id="contact_{contact.id}_details_title" class="text-lg font-bold">Contact details</h3>
+				<button
+					type="button"
+					class="btn btn-square btn-ghost btn-sm"
+					aria-label="Edit {contact.phoneNumber}"
+					title="Edit contact"
+					onclick={onedit}
+				>
+					<svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+					</svg>
+				</button>
+			</div>
 
 			<dl class="mt-4 divide-y divide-base-content/10">
 				{#each Object.values(ContactField) as field (field)}
