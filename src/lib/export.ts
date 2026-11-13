@@ -1,4 +1,4 @@
-/** File formats the phone book can be exported to (issue #11). Values are the file extensions. */
+/** File formats the phone book can be exported to. Values are the file extensions. */
 export enum ExportFormat {
 	Excel = 'xlsx',
 	Pdf = 'pdf'

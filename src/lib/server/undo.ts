@@ -21,7 +21,7 @@ async function undoKey(secret: string): Promise<CryptoKey> {
 /**
  * An encrypted, expiring copy of a deleted contact, for the "Undo" button.
  * Encrypted (AES-GCM), not just signed, so the contact data isn't readable from the page,
- * and it can't be forged. Expires so that wiped contacts can't be brought back later (issue #12).
+ * and it can't be forged. Expires so deleted contacts can't be brought back later.
  */
 export async function createUndoToken(contact: Contact, secret: string, now = Date.now()): Promise<string> {
 	const payload: UndoPayload = {

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { LIST_STICKY_TOP, STANDARD_CONTACTS, groupListEntries, rowField, rowSelector, setContacts } from './support.ts';
 
-// Issue #7: search group, location, phone number and description, highlight the matches.
+// Search group, location, phone number and description, with matches highlighted.
 const CONTACTS = [
 	...STANDARD_CONTACTS, // Family/Zurich, Work/Bern, Ärzte/Basel, 112 Emergency/Zurich
 	{ groupName: 'Family', location: 'Bern', phoneNumber: '555 0160' },

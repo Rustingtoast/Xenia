@@ -10,9 +10,7 @@
 
 	let { data, form }: PageProps = $props();
 
-	// What the banner shows: the answer to the last delete/undo. A copy of `form`, because SvelteKit empties
-	// `form` on every navigation and a search is one: looking for the contact you just deleted must not take
-	// the Undo button away.
+	// Copy of `form`: SvelteKit clears it on navigation, and the Undo button must survive a search.
 	// svelte-ignore state_referenced_locally
 	let notice = $state(form);
 	$effect.pre(() => {
@@ -26,30 +24,26 @@
 	/** True while an Undo request is running: the button is disabled so a double tap can't restore twice. */
 	let restoring = $state(false);
 
-	// Search (issue #7). The text box updates as you type; the search itself lives in the URL (?q=…), so reload
-	// and the back button keep it. It is applied shortly after typing stops, without a history entry per key.
+	// The search lives in the URL (?q=…), so reload/back keep it; applied shortly after typing stops.
 	const SEARCH_DELAY_MS = 250;
-	// Starts with the current search (also on the server, so the box isn't empty on load); showAppliedSearch
-	// keeps it in step afterwards.
 	// svelte-ignore state_referenced_locally
 	let searchText = $state(data.search);
 	let searchInput: HTMLInputElement;
 	let searchBar: HTMLElement;
 	let results: HTMLElement;
-	/** Runs when typing has paused; undefined when nothing is waiting. */
+	/** Debounce timer; undefined while idle. */
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
-	/** The search that was asked for and is still loading; undefined when none is. */
+	/** Search in flight; undefined when none. */
 	let loadingSearch: string | undefined;
-	/** Counts the searches asked for, to tell whether one that finished is still the latest. */
+	/** Monotonic counter for ignoring stale responses. */
 	let searchRequests = 0;
 
-	/** Puts the search the list shows into the box. "Zur " with a trailing space is still the search "Zur". */
+	/** Syncs the box to the search the list shows (normalized). */
 	function showAppliedSearch() {
 		if (normalizeSearch(searchText) !== data.search) searchText = data.search;
 	}
 
-	// Follow searches that change from outside the box (back button, a link). Not while the box is ahead of
-	// the list (its search is still loading, or typing hasn't paused yet): what was typed meanwhile stays.
+	// Follow searches changed outside the box (back, link), unless one is in flight or typing hasn't paused.
 	$effect(() => {
 		void data.search;
 		untrack(() => {
@@ -61,25 +55,24 @@
 		clearTimeout(searchTimer);
 		searchTimer = undefined;
 		const search = normalizeSearch(text);
-		// Compared with the search that is on its way, not only the one shown: clearing the box while "bern"
-		// is still loading has to load the empty search, or "bern" arrives after all.
+		// Compare with the search in flight, not the one shown: clearing while "bern" loads must still load
+		// the empty search, or "bern" arrives after all.
 		if (search === (loadingSearch ?? data.search)) return;
 
 		const url = new URL(page.url.href); // page.url is read-only
 		if (search) url.searchParams.set('q', search);
 		else url.searchParams.delete('q');
-		url.hash = ''; // a #group-… from an earlier Group list jump would scroll a reload to that group
+		url.hash = ''; // drop a #group-… left by a Group list jump, so reload doesn't scroll to it
 
 		const request = ++searchRequests;
 		loadingSearch = search;
 		let arrived = false;
 		try {
-			// replace: no history entry per search. reset: false keeps the focus in the box; it also keeps the
-			// scroll position, which showFirstResults corrects.
+			// replace: no history entry per search. reset:false keeps focus and scroll (showFirstResults fixes the scroll).
 			await goto(url, { replace: true, reset: false });
 			arrived = true;
 		} catch {
-			// Overtaken by another navigation (e.g. the back button): that one decides what is shown.
+			// Overtaken by another navigation (e.g. back button).
 		}
 		if (request !== searchRequests) return; // a newer search is loading: it finishes up
 		loadingSearch = undefined;
@@ -87,10 +80,7 @@
 		if (arrived) showFirstResults();
 	}
 
-	/**
-	 * After a new search: if the start of the list is scrolled away under the search bar, bring it back to
-	 * just below it, so the results are shown from the first match. The search bar itself stays where it is.
-	 */
+	/** After a new search, scroll the list's start just below the search bar so results begin at the first match. */
 	function showFirstResults() {
 		const hidden = searchBar.getBoundingClientRect().bottom - results.getBoundingClientRect().top;
 		if (hidden > 1) window.scrollBy(0, -hidden);
@@ -112,7 +102,6 @@
 	<title>Phonebook · Xenia</title>
 </svelte:head>
 
-<!-- Phone layout: a centered, phone-wide column (36rem), also on wider windows below md. md+: full width. -->
 <div class="mx-auto max-w-xl md:max-w-none">
 	<div class="mb-2 flex items-center justify-between gap-3">
 		<div>
@@ -125,11 +114,10 @@
 				{/if}
 			</p>
 		</div>
-		<!-- Mock: becomes "new contact" in issue #5 -->
+		<!-- Placeholder: the "new contact" form is not built yet. -->
 		<button type="button" class="btn btn-primary" disabled>+ New</button>
 	</div>
 
-	<!-- Banner colours (readable text, brighter green) are set once for all soft alerts in src/app.css. -->
 	{#if notice?.outcome === ActionOutcome.Deleted}
 		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
 			<span>Contact deleted.</span>
@@ -137,8 +125,8 @@
 				method="POST"
 				action={pageAction(page.url, 'restore')}
 				use:enhance={({ cancel }) => {
-					// One restore at a time. Otherwise a double tap sends a second request whose answer ("can't
-					// restore": the contact is back already) arrives last and replaces "Contact restored.".
+					// One restore at a time: a double tap would send a second request whose "can't restore"
+					// answer arrives last and replaces "Contact restored.".
 					if (restoring) {
 						cancel();
 						return;
@@ -151,7 +139,7 @@
 									? groupKey((result.data.restored as { groupName: string }).groupName)
 									: undefined;
 							const reloadSection = restoredGroup !== undefined && groupKeys.has(restoredGroup);
-							await update({ navigate: false }); // the answer belongs to the page as it is now (see ContactRow)
+							await update({ navigate: false }); // keep the current page (its search may have changed)
 							// A new section loads itself; an existing one reloads so the contact reappears in its place.
 							if (reloadSection) sections[restoredGroup].reload();
 						} finally {
@@ -161,7 +149,6 @@
 				}}
 			>
 				<input type="hidden" name="token" value={notice.undoToken} />
-				<!-- Solid green (daisyUI success); its edge is set in src/app.css so it stands out on the green banner. -->
 				<button class="btn btn-sm btn-success" disabled={restoring}>Undo</button>
 			</form>
 		</div>
@@ -171,9 +158,7 @@
 		<div role="alert" class="mb-4 alert alert-soft alert-warning">This contact can no longer be restored.</div>
 	{/if}
 
-	<!-- Always visible: sticks below the top bar while the list scrolls under it. Searches group, location,
-	     phone number (also ignoring how it's written) and description; choosing fields is issue #9.
-	     Its height (with padding) is --search-bar-height in app.css; group headings stick right below it. -->
+	<!-- Searches group, location, phone (separator-insensitive) and description. -->
 	<div bind:this={searchBar} class="sticky top-16 z-20 -mx-1 bg-base-200 px-1 py-2">
 		<label class="input w-full border-base-content/20 bg-base-100">
 			<svg class="h-5 w-5 opacity-60" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -209,7 +194,7 @@
 		</label>
 	</div>
 
-	<!-- The list, or what is shown instead of it. showFirstResults measures where it starts. -->
+	<!-- Bound for showFirstResults to measure. -->
 	<div bind:this={results}>
 		{#if data.total === 0}
 			<div class="rounded-box bg-base-100 p-10 text-center text-base-content/60 shadow-sm">No contacts yet.</div>
@@ -219,7 +204,7 @@
 				<button type="button" class="btn mt-4 btn-sm" onclick={clearSearch}>Clear search</button>
 			</div>
 		{:else}
-			<!-- No overflow clipping on this box: the row option menus must be able to stick out of it. -->
+			<!-- No overflow clipping: row menus must stick out. -->
 			<div class="rounded-box bg-base-100 shadow-sm">
 				<div class="hidden grid-cols-[1fr_1fr_minmax(11rem,1fr)_1.5fr_2rem] gap-4 border-b border-base-content/10 px-4 py-3 text-sm font-semibold text-base-content/60 md:grid">
 					<span>Group</span><span>Location</span><span>Phone number</span><span>Description</span><span class="sr-only">Options</span>

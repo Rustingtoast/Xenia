@@ -167,7 +167,7 @@ test('list positions survive the round trip through a URL, and junk is rejected'
 	}
 });
 
-describe('search (issue #7)', () => {
+describe('search', () => {
 	beforeEach(() => {
 		addContact(db, { groupName: 'Family', location: 'Zurich' });
 		addContact(db, { groupName: 'Family', location: 'Bern' });

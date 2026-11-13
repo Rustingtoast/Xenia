@@ -1,6 +1,5 @@
 <script lang="ts">
-	// All of a contact's information in one view. The fields come from ContactField (contact-fields.ts),
-	// so a new field shows up here by adding it there.
+	// All fields from ContactField, so a new field shows up here automatically.
 	import { tick } from 'svelte';
 	import { CONTACT_FIELD_LABELS, ContactField, contactFieldText } from '#lib/contact-fields.js';
 	import type { Contact } from '#lib/contacts.js';
@@ -37,7 +36,7 @@
 							{:else if field === ContactField.Description && !contact.description}
 								<span class="text-base-content/40 italic">No description</span>
 							{:else if field === ContactField.Location || field === ContactField.Description}
-								<!-- Searched fields: highlighted. pre-wrap keeps line breaks (descriptions can have several lines). -->
+								<!-- pre-wrap keeps line breaks in descriptions. -->
 								<span class="whitespace-pre-wrap"><Highlight text={contactFieldText(contact, field)} {search} /></span>
 							{:else}
 								<span class="whitespace-pre-wrap">{contactFieldText(contact, field)}</span>

@@ -1,10 +1,8 @@
 // Helpers for forms that post to the page's form actions.
 
 /**
- * The `action` of a form that posts to a named action of the current page, keeping the page's own query:
- * pageAction(page.url, 'delete') → "?q=bern&/delete". SvelteKit shows a form's answer on the URL the form
- * was sent to (without the action name); a bare "?/delete" replaces the query, so the answer would arrive
- * on the page without its search.
+ * Form action for a named page action, keeping the page's query:
+ * pageAction(page.url, 'delete') → "?q=bern&/delete".
  */
 export function pageAction(url: Pick<URL, 'search'>, name: string): string {
 	const query = new URLSearchParams(url.search);

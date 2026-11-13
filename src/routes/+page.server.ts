@@ -6,10 +6,10 @@ import { appSecret } from '#lib/server/secret.js';
 import { createUndoToken, restoreFromUndoToken } from '#lib/server/undo.js';
 import type { Actions, PageServerLoad } from './$types';
 
-// The list page loads only the groups and their counts; each group's contacts are fetched lazily,
-// in chunks, by its section (see routes/contacts/group/+server.ts).
-// ?q=… searches group, location, phone number and description (issue #7): then only groups with matching
-// contacts, counting those.
+// The list page loads only the groups and their counts; each group's contacts are fetched lazily in chunks
+// by its section (see routes/contacts/group/+server.ts).
+// ?q=… searches group, location, phone number and description; only matching groups are returned, counting
+// the matches.
 export const load: PageServerLoad = ({ url }) => {
 	const db = getDb();
 	const search = normalizeSearch(url.searchParams.get('q') ?? '');
@@ -27,7 +27,7 @@ export const load: PageServerLoad = ({ url }) => {
 export const actions: Actions = {
 	delete: async ({ request }) => {
 		const id = Number((await request.formData()).get('id'));
-		// Once users exist (issue #8) this must only delete the signed-in user's contacts.
+		// Once accounts exist, this must only delete the signed-in user's contacts.
 		const contact = Number.isInteger(id) ? deleteContact(getDb(), id) : null;
 		if (!contact) return fail(404, { outcome: ActionOutcome.NotFound as const });
 

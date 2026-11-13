@@ -1,10 +1,6 @@
 <script lang="ts">
-	// The Group list: every group with its number of contacts; tap one to jump to its section.
-	// It always lies on top of the page (position: fixed), so opening/closing it never moves the contacts.
-	// - Docked-wide screens (`docked:`, ≥ 86rem): a panel below the top bar, in the empty space left of
-	//   the contacts. Shown by default; the hamburger hides it.
-	// - Smaller screens: a drawer that slides in over the page with a backdrop, hidden until the hamburger
-	//   opens it; picking a group, the backdrop, ✕ or Escape close it.
+	// Group list: tap a group to jump to its section. Docked-wide (≥86rem) it's a side panel; on smaller
+	// screens a drawer that slides over the page.
 	import { sectionId, type GroupCount } from '#lib/contacts.js';
 	import { GroupListMode } from '#lib/group-list.js';
 	import ExportDialog from './ExportDialog.svelte';

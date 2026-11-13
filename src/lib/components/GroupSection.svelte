@@ -1,14 +1,12 @@
 <script lang="ts">
-	// One group: a sticky heading plus its contacts, loaded lazily in chunks
-	// (GET /contacts/group?name=…) when the placeholder below the loaded rows comes into view.
-	// The placeholder reserves the height of the rows still to come, so the page doesn't jump
-	// while loading and the side index lands on the right spot.
+	// One group: sticky heading plus its contacts, lazy-loaded in chunks as the placeholder below scrolls
+	// into view. The placeholder reserves the height still to come, so the page doesn't jump.
 	import { SectionLoadState, sectionId, type Contact, type SectionChunkResponse } from '#lib/contacts.js';
 	import ContactRow from './ContactRow.svelte';
 	import Highlight from './Highlight.svelte';
 
-	// `search`: only contacts matching it are loaded, and matches are highlighted (issue #7). The page gives every
-	// search its own sections (keyed on it), so a section never mixes results of two searches.
+	// `search`: only matching contacts are loaded, and matches are highlighted. The page gives every search its
+	// own sections (keyed on it), so a section never mixes results of two searches.
 	let {
 		name,
 		count,

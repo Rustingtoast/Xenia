@@ -1,8 +1,6 @@
 <script lang="ts">
-	// Export the phone book (issue #11). PLACEHOLDER: shows the choices, the export itself comes later.
-	// About the save location: a web page can't write to a folder of its own choosing. When this is built,
-	// the file is either downloaded (the browser puts it in Downloads, or asks if set to) or, in browsers
-	// that support it (Chrome/Edge, not Firefox/Safari), saved via the browser's own "Save as" window.
+	// Export the phone book. PLACEHOLDER: shows the choices; the export itself comes later.
+	// A web page can't choose a folder: the file is downloaded (or, in Chrome/Edge, via "Save as").
 	import { EXPORT_FORMAT_LABELS, ExportFormat } from '#lib/export.js';
 
 	let dialog: HTMLDialogElement;

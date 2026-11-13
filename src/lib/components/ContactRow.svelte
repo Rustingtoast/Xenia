@@ -1,10 +1,5 @@
 <script lang="ts">
-	// One phonebook row with its options menu (⋮), delete confirmation and contact details dialogs.
-	// Tapping the entry (anywhere except the ⋮ menu) opens the details. Numbers are plain text: Xenia is not
-	// a phone that dials, so there are no tel: links.
-	// Phones: number, location, description (left-aligned, in a centered column, see +page.svelte).
-	// Wider screens: Group | Location | Phone | Description columns + ⋮.
-	// Every line is cut off with "…" rather than wrapping, so all rows have the same height: it must match
+	// One phonebook row with its ⋮ menu and dialogs. Every line truncates to a fixed height, matching
 	// --contact-row-height in app.css (lazy-loading placeholders rely on it).
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
@@ -44,17 +39,14 @@
 	}
 </script>
 
-<!-- The click handler is a mouse/touch convenience; keyboard and screen-reader users have the details button
-     (the description line) below, so no key handler or role is needed on the <li> itself. -->
+<!-- Click is a convenience; keyboard/screen-reader users have the details button below. -->
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 <li
 	id="contact_{contact.id}"
 	class="flex cursor-pointer items-center gap-2 border-t border-base-content/5 px-4 py-3 transition-colors hover:bg-base-200/50 md:grid md:grid-cols-[1fr_1fr_minmax(11rem,1fr)_1.5fr_2rem] md:gap-4"
 	onclick={openDetailsFromRow}
 >
-	<!-- Phones: three left-aligned lines, most important first: number (large, bold), location, description
-	     (smallest, muted). The group is not repeated here: the section heading above already shows it.
-	     md+: these become the Group | Location | Phone | Description columns. -->
+	<!-- md+ turns these into the Group | Location | Phone | Description columns. -->
 	<div class="flex min-w-0 flex-1 flex-col md:contents">
 		<span
 			class="truncate text-lg leading-7 font-semibold tabular-nums md:order-3 md:font-mono md:text-base md:font-normal"
@@ -67,7 +59,7 @@
 			class="min-w-0 truncate text-sm leading-6 text-base-content/70 md:order-2 md:text-base md:text-base-content"
 			data-field="location"><Highlight text={contact.location} {search} /></span
 		>
-		<!-- Always one line, cut off with "…". It is also the details button for keyboard/screen-reader users. -->
+		<!-- Also the details button for keyboard/screen-reader users. -->
 		<button
 			type="button"
 			class={[
@@ -82,9 +74,7 @@
 		>
 	</div>
 
-	<!-- daisyUI focus dropdown: opens while the ⋮ button has focus, closes when focus leaves.
-	     A div with tabindex (not a <button>) because Safari doesn't focus buttons on click.
-	     focus-within:z-40 lifts the open menu above the rows below it. -->
+	<!-- Focus dropdown: a div (not <button>) because Safari doesn't focus buttons on click. -->
 	<div class="dropdown dropdown-end focus-within:z-40 md:order-5" bind:this={dropdown}>
 		<div
 			tabindex="0"
@@ -103,7 +93,7 @@
 			bind:this={menu}
 			class="dropdown-content menu z-30 my-1 w-40 rounded-box bg-base-100 p-2 shadow-lg ring-1 ring-base-content/10"
 		>
-			<!-- Mock: editing arrives with issue #6. -->
+			<!-- Placeholder: editing is not built yet. -->
 			<li class="menu-disabled" title="Coming soon">
 				<span aria-disabled="true">
 					<svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -125,7 +115,7 @@
 		</ul>
 	</div>
 
-	<!-- Bottom sheet on phones, centered dialog on larger screens. Esc, Cancel or tapping outside closes it. -->
+	<!-- Bottom sheet on phones, centered dialog on larger screens. -->
 	<dialog bind:this={dialog} class="modal modal-bottom sm:modal-middle" aria-labelledby="contact_{contact.id}_delete_title">
 		<div class="modal-box">
 			<h3 id="contact_{contact.id}_delete_title" class="text-lg font-bold">Delete this contact?</h3>
@@ -143,10 +133,9 @@
 					use:enhance={() =>
 						async ({ result, update }) => {
 							dialog.close();
-							// Shows the banner (with Undo) and refreshes the counts. The form posts to this page with its
-							// search (pageAction), so the answer lands here. navigate: false covers the one case left: the
-							// search changed while the request ran. The answer then belongs to the page as it is now;
-							// SvelteKit 3 would otherwise go back to the URL the form was sent from.
+							// Shows the banner (with Undo) and refreshes the counts. The form keeps the page's search
+							// (pageAction), so the answer lands here. navigate: false handles a search that changed
+							// while the request ran: the answer belongs to the page as it is now.
 							await update({ navigate: false });
 							if (result.type === 'success') ondeleted(contact.id);
 						}}
