@@ -63,6 +63,9 @@ mise run setup      # installs packages, creates the dev database, loads 25 samp
 mise run dev        # http://localhost:5173
 ```
 
+The sample contacts belong to a demo account: sign in with **`demo@xenia.local`** / **`demo-password`**
+(or register your own — each account has its own phone book).
+
 ## Everyday commands
 
 | Command                | What it does                                                          |

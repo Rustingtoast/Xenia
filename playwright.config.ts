@@ -14,10 +14,14 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? 'github' : 'list',
+	// Creates the test account + session before the tests run (see e2e/global-setup.ts).
+	globalSetup: './e2e/global-setup.ts',
 	use: {
 		baseURL: ORIGIN,
 		// Report a light system theme on every machine (a Mac in dark mode would otherwise leak into tests).
 		colorScheme: 'light',
+		// Every test starts signed in as the shared test user.
+		storageState: 'test-results/storage-state.json',
 		screenshot: 'only-on-failure',
 		trace: 'retain-on-failure'
 	},
