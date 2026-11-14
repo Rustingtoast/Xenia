@@ -1,12 +1,11 @@
-// A tiny in-memory, fixed-window rate limiter. It lives in the process (not the database), so it
-// resets on restart — that's fine here: the goal is to slow automated password guessing, not to be
-// a durable counter.
+// In-memory fixed-window rate limiter. It resets on restart — fine here: the goal is to slow
+// automated guessing, not to be a durable counter.
 
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
-// Drop expired buckets once the map gets large, so a flood of distinct keys can't grow it forever.
+// Drop expired buckets once the map gets large, so distinct keys can't grow it forever.
 function prune(now: number): void {
 	if (buckets.size < 5000) return;
 	for (const [key, bucket] of buckets) {
@@ -14,10 +13,7 @@ function prune(now: number): void {
 	}
 }
 
-/**
- * Records one attempt for `key` and reports whether it is still within the limit.
- * `limit` is the maximum attempts allowed per `windowMs`.
- */
+/** Records an attempt for `key`; returns false when it is over the limit (rejected). */
 export function rateLimit(key: string, limit: number, windowMs: number, now = Date.now()): boolean {
 	prune(now);
 	const bucket = buckets.get(key);
@@ -29,13 +25,11 @@ export function rateLimit(key: string, limit: number, windowMs: number, now = Da
 	return bucket.count <= limit;
 }
 
-/** True when `key` is currently over its limit (used to reject before doing any work). */
 export function isRateLimited(key: string, limit: number, windowMs: number, now = Date.now()): boolean {
 	const bucket = buckets.get(key);
 	return !!bucket && bucket.resetAt > now && bucket.count >= limit;
 }
 
-/** Forgets any recorded attempts for `key` (e.g. after a successful login). */
 export function resetRateLimit(key: string): void {
 	buckets.delete(key);
 }

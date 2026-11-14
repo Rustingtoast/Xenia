@@ -13,8 +13,7 @@ import { getDb } from '#lib/server/db.js';
 import { isRateLimited, rateLimit } from '#lib/server/rate-limit.js';
 import type { Actions, PageServerLoad } from './$types';
 
-// Account-creation guard: at most this many registrations per IP per window.
-const REGISTER_ATTEMPT_LIMIT = 5;
+const REGISTER_ATTEMPT_LIMIT = 5; // registrations per IP
 const REGISTER_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 export const load: PageServerLoad = ({ locals }) => {

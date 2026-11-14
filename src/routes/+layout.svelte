@@ -10,7 +10,7 @@
 
 	let { children }: LayoutProps = $props();
 
-	/** The signed-in user (from +layout.server.ts), or null on the login/register pages. */
+	/** The signed-in user, or null. */
 	const user = $derived(page.data.user);
 	/** Pages that show contacts provide their groups; only those get the Group list. */
 	const groups = $derived(page.data.groups as GroupCount[] | undefined);
@@ -55,7 +55,6 @@
 		<a href="/" class="btn btn-ghost text-xl">Xenia</a>
 	</div>
 	{#if user}
-		<!-- Account dropdown: a person icon that reveals the email and the Log out action. -->
 		<div class="dropdown dropdown-end">
 			<div
 				tabindex="0"

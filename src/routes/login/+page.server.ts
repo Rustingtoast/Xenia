@@ -4,8 +4,7 @@ import { getDb } from '#lib/server/db.js';
 import { isRateLimited, rateLimit, resetRateLimit } from '#lib/server/rate-limit.js';
 import type { Actions, PageServerLoad } from './$types';
 
-// Brute-force guard: at most this many failed logins per IP per window.
-const LOGIN_ATTEMPT_LIMIT = 10;
+const LOGIN_ATTEMPT_LIMIT = 10; // failed attempts per IP
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 export const load: PageServerLoad = ({ locals }) => {
@@ -19,7 +18,6 @@ export const actions: Actions = {
 		const email = String(data.get('email') ?? '');
 		const password = String(data.get('password') ?? '');
 
-		// Reject before the (expensive) password check once an address has failed too many times.
 		const key = `login:${getClientAddress()}`;
 		if (isRateLimited(key, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS)) {
 			return fail(429, { error: 'Too many attempts. Try again later.' });
