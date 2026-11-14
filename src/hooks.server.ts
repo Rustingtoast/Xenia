@@ -10,8 +10,6 @@ export const init = async () => {
 	appSecret();
 };
 
-// Resolves the signed-in user from the session cookie on every request, so routes and
-// actions read event.locals.user instead of touching cookies themselves.
 export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get(SESSION_COOKIE);
 	event.locals.user = token ? sessionUser(getDb(), token) : null;

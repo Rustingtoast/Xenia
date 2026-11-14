@@ -2,11 +2,8 @@ import type { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
 
-// Accounts and sessions. Passwords are hashed with argon2id (Bun's built-in); session tokens are
-// 256-bit random values whose SHA-256 is stored, so neither a database leak nor a leaked cookie
-// exposes a password or another session.
-
-/** The signed-in user as the server exposes it (id + email; the password hash never leaves here). */
+// Passwords are argon2id hashes; session tokens are 256-bit random values stored as SHA-256, so
+// neither a database leak nor a leaked cookie exposes a password or another session.
 export type AuthUser = { id: number; email: string };
 
 export const SESSION_COOKIE = 'session';
@@ -16,7 +13,6 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 const EMAIL_MAX_LENGTH = 254;
 
-/** Emails are compared case-insensitively: trim and lowercase before storing or looking up. */
 export function normalizeEmail(email: string): string {
 	return email.trim().toLowerCase();
 }
@@ -37,7 +33,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 	try {
 		return await Bun.password.verify(password, hash);
 	} catch {
-		return false; // a malformed stored hash is simply not a match
+		return false;
 	}
 }
 
@@ -45,18 +41,16 @@ export function findUserByEmail(db: Database, email: string): AuthUser | null {
 	return db.query<AuthUser, [string]>('SELECT id, email FROM users WHERE email = ?').get(normalizeEmail(email));
 }
 
-// A fixed dummy hash, so an attempt with an unknown email still runs one argon2id check and takes
-// roughly as long as a real one — this doesn't reveal whether an account exists.
+// Verify against a fixed dummy hash for unknown emails, so a failed login takes the same time
+// whether or not the account exists.
 let dummyHash: string | undefined;
 async function dummyPasswordHash(): Promise<string> {
 	dummyHash ??= await hashPassword('xenia-not-a-real-password');
 	return dummyHash;
 }
 
-/** Checks email + password. Returns the user, or null when the email is unknown or the password wrong. */
 export async function verifyLogin(db: Database, email: string, password: string): Promise<AuthUser | null> {
-	// Reject oversized passwords before hashing: argon2id's cost grows with the input length, so an
-	// unbounded password would be a cheap slow-hash DoS on the login endpoint.
+	// Reject oversized passwords before hashing: argon2id's cost grows with the input length.
 	if (password.length > PASSWORD_MAX_LENGTH) return null;
 	const row = db
 		.query<{ id: number; email: string; password_hash: string }, [string]>(
@@ -68,11 +62,6 @@ export async function verifyLogin(db: Database, email: string, password: string)
 	return { id: row.id, email: row.email };
 }
 
-/**
- * Creates a user. Returns null when the email is already taken (the unique constraint races with
- * the caller's pre-check, so the conflict is handled here rather than thrown). The caller must have
- * already validated the input.
- */
 export async function createUser(db: Database, email: string, password: string): Promise<AuthUser | null> {
 	const hash = await hashPassword(password);
 	const row = db
@@ -84,7 +73,6 @@ export async function createUser(db: Database, email: string, password: string):
 	return row ? { id: row.id, email: normalizeEmail(email) } : null;
 }
 
-/** 256 bits of randomness as a URL-safe string; the cookie carries this, the DB stores its hash. */
 function generateSessionToken(): string {
 	return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
 }
@@ -106,7 +94,6 @@ export function deleteSession(db: Database, token: string): void {
 	db.query('DELETE FROM sessions WHERE token_hash = ?').run(hashToken(token));
 }
 
-/** The user behind a session cookie, or null if it is missing, unknown or expired. */
 export function sessionUser(db: Database, token: string, now = Date.now()): AuthUser | null {
 	return db
 		.query<AuthUser, [string, string]>(
@@ -117,7 +104,6 @@ export function sessionUser(db: Database, token: string, now = Date.now()): Auth
 		.get(hashToken(token), new Date(now).toISOString());
 }
 
-/** Sets the session cookie. `secure` is only true on https (the plain-http LAN setup needs false). */
 export function setSessionCookie(cookies: Cookies, token: string, secure: boolean): void {
 	cookies.set(SESSION_COOKIE, token, {
 		path: '/',
