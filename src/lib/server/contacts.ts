@@ -83,12 +83,12 @@ function searchCondition(search: string): { sql: string; params: string[] } | nu
  * The WHERE clause of the chunk queries: one group, optionally only contacts after a list position and/or
  * matching a search.
  */
-function listFilter(filter: { groupName: string; after?: ListPosition; search?: string }): {
+function listFilter(filter: { userId: number; groupName: string; after?: ListPosition; search?: string }): {
 	where: string;
 	params: (string | number)[];
 } {
-	const conditions = ['group_name = ?'];
-	const params: (string | number)[] = [filter.groupName];
+	const conditions = ['user_id = ?', 'group_name = ?'];
+	const params: (string | number)[] = [filter.userId, filter.groupName];
 	if (filter.after) {
 		conditions.push(AFTER_POSITION);
 		params.push(...filter.after);
@@ -136,11 +136,12 @@ export function validateContact(input: ContactInput): { values: Required<Contact
 }
 
 /**
- * Creates a contact. Throws ContactValidationError if the input is invalid.
+ * Creates a contact for `userId`. Throws ContactValidationError if the input is invalid.
  * `id` and `createdAt` are only for restoring a deleted contact (undo).
  */
 export function createContact(
 	db: Database,
+	userId: number,
 	input: ContactInput,
 	restore: { id?: number; createdAt?: string } = {}
 ): Contact {
@@ -150,11 +151,12 @@ export function createContact(
 	const now = new Date().toISOString();
 	const row = db
 		.query<{ id: number }, (string | number | null)[]>(
-			`INSERT INTO contacts (id, group_name, location, phone_number, description, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`
+			`INSERT INTO contacts (id, user_id, group_name, location, phone_number, description, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
 		)
 		.get(
 			restore.id ?? null,
+			userId,
 			values.groupName,
 			values.location,
 			values.phoneNumber,
@@ -162,18 +164,18 @@ export function createContact(
 			restore.createdAt ?? now,
 			now
 		)!;
-	return findContact(db, row.id)!;
+	return findContact(db, userId, row.id)!;
 }
 
-export function findContact(db: Database, id: number): Contact | null {
-	return db.query<Contact, [number]>(`${SELECT_CONTACT} WHERE id = ?`).get(id);
+export function findContact(db: Database, userId: number, id: number): Contact | null {
+	return db.query<Contact, [number, number]>(`${SELECT_CONTACT} WHERE id = ? AND user_id = ?`).get(id, userId);
 }
 
 /**
  * Updates a contact's fields, keeping its id and creation time. Returns the updated contact, or
  * null if it didn't exist. Throws ContactValidationError if the input is invalid.
  */
-export function updateContact(db: Database, id: number, input: ContactInput): Contact | null {
+export function updateContact(db: Database, userId: number, id: number, input: ContactInput): Contact | null {
 	const { values, errors } = validateContact(input);
 	if (Object.keys(errors).length > 0) throw new ContactValidationError(errors);
 
@@ -181,41 +183,41 @@ export function updateContact(db: Database, id: number, input: ContactInput): Co
 	const updated = db
 		.query<{ id: number }, (string | number)[]>(
 			`UPDATE contacts SET group_name = ?, location = ?, phone_number = ?, description = ?, updated_at = ?
-			 WHERE id = ? RETURNING id`
+			 WHERE id = ? AND user_id = ? RETURNING id`
 		)
-		.get(values.groupName, values.location, values.phoneNumber, values.description, now, id);
-	return updated ? findContact(db, updated.id) : null;
+		.get(values.groupName, values.location, values.phoneNumber, values.description, now, id, userId);
+	return updated ? findContact(db, userId, updated.id) : null;
 }
 
 /** Deletes a contact. Returns it, or null if it didn't exist. */
-export function deleteContact(db: Database, id: number): Contact | null {
-	return db.query<Contact, [number]>(
-		`DELETE FROM contacts WHERE id = ?
+export function deleteContact(db: Database, userId: number, id: number): Contact | null {
+	return db.query<Contact, [number, number]>(
+		`DELETE FROM contacts WHERE id = ? AND user_id = ?
 		 RETURNING id, group_name AS groupName, location, phone_number AS phoneNumber, description,
 		           created_at AS createdAt, updated_at AS updatedAt`
-	).get(id);
+	).get(id, userId);
 }
 
 /**
- * Every group with its number of contacts, in list order: [{ name: "Doctors", count: 2 }, …].
+ * Every group of `userId` with its number of contacts, in list order: [{ name: "Doctors", count: 2 }, …].
  * With a search, only groups with matching contacts, counting only those.
  * "family" and "Family" are one group (NOCASE); the name shown is the capitalized spelling if any.
  */
-export function groupCounts(db: Database, search = ''): GroupCount[] {
+export function groupCounts(db: Database, userId: number, search = ''): GroupCount[] {
 	const matching = searchCondition(search);
 	// The search only decides what is counted (a condition is 1 or 0), not which rows are read: the name
 	// comes from all contacts of a group, so a group isn't called "family" in one search and "Family" in another.
 	return db
-		.query<GroupCount, string[]>(
+		.query<GroupCount, (string | number)[]>(
 			`SELECT MIN(group_name COLLATE BINARY) AS name, ${matching ? `SUM(${matching.sql})` : 'COUNT(*)'} AS count
-			 FROM contacts GROUP BY group_name HAVING count > 0 ORDER BY group_name`
+			 FROM contacts WHERE user_id = ? GROUP BY group_name HAVING count > 0 ORDER BY group_name`
 		)
-		.all(...(matching?.params ?? []));
+		.all(...(matching?.params ?? []), userId);
 }
 
-/** Number of contacts in the whole phone book. */
-export function countContacts(db: Database): number {
-	return db.query<{ n: number }, []>('SELECT COUNT(*) AS n FROM contacts').get()!.n;
+/** Number of contacts in `userId`'s phone book. */
+export function countContacts(db: Database, userId: number): number {
+	return db.query<{ n: number }, [number]>('SELECT COUNT(*) AS n FROM contacts WHERE user_id = ?').get(userId)!.n;
 }
 
 /** A contact's place in its group's list order, for continuing a section after it. */
@@ -231,24 +233,25 @@ export function listPosition(contact: Contact): ListPosition {
  */
 export function sectionChunk(
 	db: Database,
+	userId: number,
 	groupName: string,
 	after?: ListPosition,
 	limit = SECTION_CHUNK_SIZE,
 	search = ''
 ): { contacts: Contact[]; more: boolean; remaining: number } {
-	const { where, params } = listFilter({ groupName, after, search });
+	const { where, params } = listFilter({ userId, groupName, after, search });
 	const rows = db
 		.query<Contact, (string | number)[]>(`${SELECT_CONTACT} ${where} ${GROUP_ORDER} LIMIT ?`)
 		.all(...params, limit + 1);
 	const contacts = rows.slice(0, limit);
 	const more = rows.length > limit;
-	const remaining = more ? countInGroup(db, groupName, listPosition(contacts.at(-1)!), search) : 0;
+	const remaining = more ? countInGroup(db, userId, groupName, listPosition(contacts.at(-1)!), search) : 0;
 	return { contacts, more, remaining };
 }
 
 /** Contacts in a group, optionally only those after a list position and/or matching a search. */
-export function countInGroup(db: Database, groupName: string, after?: ListPosition, search = ''): number {
-	const { where, params } = listFilter({ groupName, after, search });
+export function countInGroup(db: Database, userId: number, groupName: string, after?: ListPosition, search = ''): number {
+	const { where, params } = listFilter({ userId, groupName, after, search });
 	return db.query<{ n: number }, (string | number)[]>(`SELECT COUNT(*) AS n FROM contacts ${where}`).get(...params)!.n;
 }
 

@@ -8,6 +8,7 @@
 // (that is how production and the e2e tests point at their own files).
 import { existsSync, rmSync } from 'node:fs';
 import { createContact } from '../src/lib/server/contacts.ts';
+import { createUser, findUserByEmail } from '../src/lib/server/auth.ts';
 import { DEVELOPMENT_DATABASE_PATH, databasePath, openDatabase } from '../src/lib/server/db.ts';
 
 // Fictional sample contacts for local development and manual testing.
@@ -46,6 +47,10 @@ const SAMPLE_CONTACTS: [string, string, string, string?][] = [
 const path = databasePath();
 const command = process.argv[2];
 
+// The demo account the sample contacts belong to (shown after seeding).
+const DEMO_EMAIL = 'demo@xenia.local';
+const DEMO_PASSWORD = 'demo-password';
+
 function onlyOnDevelopmentDatabase(what: string) {
 	if (path !== DEVELOPMENT_DATABASE_PATH) {
 		console.error(`Refusing to ${what} in ${path}: only the dev database (${DEVELOPMENT_DATABASE_PATH}) is allowed.`);
@@ -53,25 +58,37 @@ function onlyOnDevelopmentDatabase(what: string) {
 	}
 }
 
-function seed() {
+async function seed() {
 	onlyOnDevelopmentDatabase('load sample contacts');
 	const db = openDatabase(path);
-	const existing = db.query<{ id: number; description: string }, [string, string, string]>(
-		'SELECT id, description FROM contacts WHERE group_name = ? AND location = ? AND phone_number = ?'
+
+	// Sample contacts need an owner: create the demo account on first run (idempotent).
+	const demo = findUserByEmail(db, DEMO_EMAIL) ?? (await createUser(db, DEMO_EMAIL, DEMO_PASSWORD));
+	if (!demo) {
+		console.error('Could not create the demo account.');
+		process.exit(1);
+	}
+
+	// Contacts from before accounts existed have no owner and are never shown; drop them.
+	db.run('DELETE FROM contacts WHERE user_id IS NULL');
+
+	const existing = db.query<{ id: number; description: string }, [number, string, string, string]>(
+		'SELECT id, description FROM contacts WHERE user_id = ? AND group_name = ? AND location = ? AND phone_number = ?'
 	);
 	let added = 0;
 	for (const [groupName, location, phoneNumber, description = ''] of SAMPLE_CONTACTS) {
-		const found = existing.get(groupName, location, phoneNumber);
+		const found = existing.get(demo.id, groupName, location, phoneNumber);
 		if (!found) {
-			createContact(db, { groupName, location, phoneNumber, description });
+			createContact(db, demo.id, { groupName, location, phoneNumber, description });
 			added++;
 		} else if (!found.description && description) {
 			// Sample contacts from before descriptions existed get theirs.
 			db.run('UPDATE contacts SET description = ? WHERE id = ?', [description, found.id]);
 		}
 	}
-	const total = db.query<{ n: number }, []>('SELECT COUNT(*) AS n FROM contacts').get()!.n;
+	const total = db.query<{ n: number }, [number]>('SELECT COUNT(*) AS n FROM contacts WHERE user_id = ?').get(demo.id)!.n;
 	console.log(`Seeded sample contacts: ${added} new, ${total} total (${path}).`);
+	console.log(`Demo account: ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
 }
 
 switch (command) {
@@ -83,13 +100,13 @@ switch (command) {
 		break;
 	}
 	case 'seed':
-		seed();
+		await seed();
 		break;
 	case 'reset':
 		onlyOnDevelopmentDatabase('delete the database');
 		for (const file of [path, `${path}-wal`, `${path}-shm`]) rmSync(file, { force: true });
 		console.log(`Deleted ${path}.`);
-		seed();
+		await seed();
 		break;
 	default:
 		console.error('Usage: bun scripts/db.ts migrate | seed | reset');

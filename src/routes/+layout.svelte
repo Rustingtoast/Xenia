@@ -10,6 +10,8 @@
 
 	let { children }: LayoutProps = $props();
 
+	/** The signed-in user (from +layout.server.ts), or null on the login/register pages. */
+	const user = $derived(page.data.user);
 	/** Pages that show contacts provide their groups; only those get the Group list. */
 	const groups = $derived(page.data.groups as GroupCount[] | undefined);
 	const search = $derived((page.data.search as string | undefined) ?? '');
@@ -52,6 +54,33 @@
 	<div class="flex-1">
 		<a href="/" class="btn btn-ghost text-xl">Xenia</a>
 	</div>
+	{#if user}
+		<!-- Account dropdown: a person icon that reveals the email and the Log out action. -->
+		<div class="dropdown dropdown-end">
+			<div
+				tabindex="0"
+				role="button"
+				class="btn btn-circle btn-ghost"
+				aria-label="Account"
+				title="Account"
+			>
+				<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+					<circle cx="12" cy="7" r="4"></circle>
+				</svg>
+			</div>
+			<div
+				tabindex="-1"
+				class="dropdown-content z-30 my-1 w-64 rounded-box bg-base-100 p-2 shadow-lg ring-1 ring-base-content/10"
+			>
+				<p class="truncate px-2 py-1 text-sm text-base-content/60" title={user.email}>{user.email}</p>
+				<form method="POST" action="?/logout">
+					<button class="btn btn-ghost btn-sm w-full justify-start text-error">Log out</button>
+				</form>
+			</div>
+		</div>
+	{/if}
 	<ThemeToggle />
 </header>
 
