@@ -3,6 +3,7 @@
 	// screens a drawer that slides over the page.
 	import { sectionId, type GroupCount } from '#lib/contacts.js';
 	import { GroupListMode } from '#lib/group-list.js';
+	import { t } from '#lib/i18n/t.js';
 	import ExportDialog from './ExportDialog.svelte';
 	import Highlight from './Highlight.svelte';
 	import SettingsDialog from './SettingsDialog.svelte';
@@ -28,13 +29,13 @@
 
 {#if mode === GroupListMode.Open}
 	<!-- Smaller screens only: tapping beside the drawer closes it. -->
-	<button type="button" class="fixed inset-0 z-30 bg-black/40 docked:hidden" aria-label="Close group list" tabindex="-1" onclick={onclose}
+	<button type="button" class="fixed inset-0 z-30 bg-black/40 docked:hidden" aria-label={t('groupList.close')} tabindex="-1" onclick={onclose}
 	></button>
 {/if}
 
 <aside
 	id="group-list"
-	aria-label="Group list"
+	aria-label={t('groupList.title')}
 	class={[
 		'fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col bg-base-100 shadow-xl transition-transform',
 		// Docked: below the sticky top bar (h-16), 14rem wide, no shadow.
@@ -45,8 +46,8 @@
 	]}
 >
 	<div class="flex items-center justify-between border-b border-base-content/10 px-4 py-3">
-		<h2 class="font-bold">Group list</h2>
-		<button type="button" class="btn btn-square btn-ghost btn-sm docked:hidden" aria-label="Close group list" onclick={onclose}>
+		<h2 class="font-bold">{t('groupList.title')}</h2>
+		<button type="button" class="btn btn-square btn-ghost btn-sm docked:hidden" aria-label={t('groupList.close')} onclick={onclose}>
 			<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 				stroke-width="2" stroke-linecap="round" aria-hidden="true">
 				<path d="M6 6l12 12M18 6L6 18"></path>
@@ -55,7 +56,7 @@
 	</div>
 
 	{#if groups.length === 0}
-		<p class="flex-1 px-4 py-3 text-sm text-base-content/60">{search ? 'No matching groups.' : 'No groups yet.'}</p>
+		<p class="flex-1 px-4 py-3 text-sm text-base-content/60">{search ? t('groupList.noMatches') : t('groupList.empty')}</p>
 	{:else}
 		<ul class="menu w-full flex-1 flex-nowrap overflow-y-auto overscroll-contain">
 			{#each groups as group (sectionId(group.name))}
@@ -77,7 +78,7 @@
 				stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path>
 			</svg>
-			Export
+			{t('groupList.export')}
 		</button>
 		<button type="button" class="btn w-full btn-ghost" onclick={() => settingsDialog.open()}>
 			<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -85,7 +86,7 @@
 				<circle cx="12" cy="12" r="3"></circle>
 				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
 			</svg>
-			Settings
+			{t('groupList.settings')}
 		</button>
 	</div>
 </aside>

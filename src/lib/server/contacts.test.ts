@@ -31,9 +31,9 @@ describe('validateContact', () => {
 
 	test('requires all three fields', () => {
 		expect(validateContact({ groupName: '', location: ' ', phoneNumber: '' }).errors).toEqual({
-			groupName: ["can't be blank"],
-			location: ["can't be blank"],
-			phoneNumber: ["can't be blank"]
+			groupName: [{ key: 'validation.blank' }],
+			location: [{ key: 'validation.blank' }],
+			phoneNumber: [{ key: 'validation.blank' }]
 		});
 	});
 
@@ -47,12 +47,18 @@ describe('validateContact', () => {
 		for (const phoneNumber of ['call me', '555-CALL', '+1', '--']) {
 			expect(validateContact({ ...valid, phoneNumber }).errors.phoneNumber).toBeDefined();
 		}
+		expect(validateContact({ ...valid, phoneNumber: '555-CALL' }).errors.phoneNumber).toEqual([
+			{ key: 'validation.phoneCharacters' }
+		]);
+		expect(validateContact({ ...valid, phoneNumber: '+1' }).errors.phoneNumber).toEqual([
+			{ key: 'validation.phoneDigits', params: { min: 3 } }
+		]);
 	});
 
 	test('limits lengths', () => {
 		const { errors } = validateContact({ ...valid, groupName: 'x'.repeat(101), phoneNumber: '1'.repeat(31) });
-		expect(errors.groupName).toEqual(['is too long (maximum is 100 characters)']);
-		expect(errors.phoneNumber).toEqual(['is too long (maximum is 30 characters)']);
+		expect(errors.groupName).toEqual([{ key: 'validation.tooLong', params: { max: 100 } }]);
+		expect(errors.phoneNumber).toEqual([{ key: 'validation.tooLong', params: { max: 30 } }]);
 	});
 
 	test('trims and collapses whitespace', () => {
@@ -65,7 +71,7 @@ describe('validateContact', () => {
 		const { values } = validateContact({ ...valid, description: '  Call after 6 pm.\n  Gate code 1234  ' });
 		expect(values.description).toBe('Call after 6 pm.\n  Gate code 1234');
 		expect(validateContact({ ...valid, description: 'x'.repeat(1001) }).errors.description).toEqual([
-			'is too long (maximum is 1000 characters)'
+			{ key: 'validation.tooLong', params: { max: 1000 } }
 		]);
 	});
 });

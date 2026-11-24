@@ -6,6 +6,8 @@
 	import { tick } from 'svelte';
 	import type { Contact, ContactChange } from '#lib/contacts.js';
 	import { pageAction } from '#lib/forms.js';
+	import type { Translatable } from '#lib/i18n/index.js';
+	import { t } from '#lib/i18n/t.js';
 	import type { ContactInput, ValidationErrors } from '#lib/server/contacts.js';
 
 	let {
@@ -37,7 +39,7 @@
 		dialog.showModal();
 	}
 
-	function messages(field: keyof ContactInput): string[] {
+	function messages(field: keyof ContactInput): Translatable[] {
 		return errors[field] ?? [];
 	}
 </script>
@@ -73,12 +75,12 @@
 				<input type="hidden" name="id" value={contact.id} />
 			{/if}
 			<h3 id={contact ? `${idPrefix}-title` : 'new-contact-title'} class="text-lg font-bold">
-				{contact ? 'Edit contact' : 'New contact'}
+				{contact ? t('contactForm.editTitle') : t('contactForm.newTitle')}
 			</h3>
 
 			<div class="mt-4 flex flex-col gap-4">
 				<div class="flex flex-col gap-1">
-					<label for={`${idPrefix}-group`} class="text-sm font-medium">Group</label>
+					<label for={`${idPrefix}-group`} class="text-sm font-medium">{t('field.group')}</label>
 					<input
 						id={`${idPrefix}-group`}
 						name="groupName"
@@ -86,14 +88,14 @@
 						class="input w-full"
 						bind:value={groupName}
 						maxlength="100"
-						placeholder="e.g. Family"
+						placeholder={t('contactForm.groupPlaceholder')}
 						aria-invalid={messages('groupName').length > 0}
 					/>
-					{#each messages('groupName') as message}<p class="text-sm text-error">{message}</p>{/each}
+					{#each messages('groupName') as message}<p class="text-sm text-error">{t(message)}</p>{/each}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<label for={`${idPrefix}-location`} class="text-sm font-medium">Location</label>
+					<label for={`${idPrefix}-location`} class="text-sm font-medium">{t('field.location')}</label>
 					<input
 						id={`${idPrefix}-location`}
 						name="location"
@@ -101,14 +103,14 @@
 						class="input w-full"
 						bind:value={location}
 						maxlength="100"
-						placeholder="e.g. Zurich"
+						placeholder={t('contactForm.locationPlaceholder')}
 						aria-invalid={messages('location').length > 0}
 					/>
-					{#each messages('location') as message}<p class="text-sm text-error">{message}</p>{/each}
+					{#each messages('location') as message}<p class="text-sm text-error">{t(message)}</p>{/each}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<label for={`${idPrefix}-phone`} class="text-sm font-medium">Phone number</label>
+					<label for={`${idPrefix}-phone`} class="text-sm font-medium">{t('field.phoneNumber')}</label>
 					<input
 						id={`${idPrefix}-phone`}
 						name="phoneNumber"
@@ -116,33 +118,33 @@
 						class="input w-full"
 						bind:value={phoneNumber}
 						maxlength="30"
-						placeholder="e.g. +41 79 123 45 67"
+						placeholder={t('contactForm.phonePlaceholder')}
 						aria-invalid={messages('phoneNumber').length > 0}
 					/>
-					{#each messages('phoneNumber') as message}<p class="text-sm text-error">{message}</p>{/each}
+					{#each messages('phoneNumber') as message}<p class="text-sm text-error">{t(message)}</p>{/each}
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<label for={`${idPrefix}-description`} class="text-sm font-medium">Description</label>
+					<label for={`${idPrefix}-description`} class="text-sm font-medium">{t('field.description')}</label>
 					<textarea
 						id={`${idPrefix}-description`}
 						name="description"
 						class="textarea w-full"
 						bind:value={description}
 						maxlength="1000"
-						placeholder="Optional"
+						placeholder={t('contactForm.descriptionPlaceholder')}
 						aria-invalid={messages('description').length > 0}
 					></textarea>
-					{#each messages('description') as message}<p class="text-sm text-error">{message}</p>{/each}
+					{#each messages('description') as message}<p class="text-sm text-error">{t(message)}</p>{/each}
 				</div>
 			</div>
 
 			<div class="modal-action">
-				<button type="button" class="btn" onclick={() => dialog.close()}>Cancel</button>
-				<button type="submit" class="btn btn-primary" disabled={saving}>{contact ? 'Save' : 'Add'}</button>
+				<button type="button" class="btn" onclick={() => dialog.close()}>{t('common.cancel')}</button>
+				<button type="submit" class="btn btn-primary" disabled={saving}>{contact ? t('common.save') : t('common.add')}</button>
 			</div>
 		</form>
 		<!-- Clicking beside the dialog closes it (mouse/touch only; keyboard users have Esc and the visible button). -->
-		<form method="dialog" class="modal-backdrop"><button tabindex="-1" aria-hidden="true">Close</button></form>
+		<form method="dialog" class="modal-backdrop"><button tabindex="-1" aria-hidden="true">{t('common.close')}</button></form>
 	{/if}
 </dialog>

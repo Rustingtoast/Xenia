@@ -1,4 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { message } from '#lib/i18n/index.js';
 import { createSession, setSessionCookie, verifyLogin } from '#lib/server/auth.js';
 import { getDb } from '#lib/server/db.js';
 import { isRateLimited, rateLimit, resetRateLimit } from '#lib/server/rate-limit.js';
@@ -20,13 +21,13 @@ export const actions: Actions = {
 
 		const key = `login:${getClientAddress()}`;
 		if (isRateLimited(key, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS)) {
-			return fail(429, { error: 'Too many attempts. Try again later.' });
+			return fail(429, { error: message('login.tooManyAttempts') });
 		}
 
 		const user = await verifyLogin(getDb(), email, password);
 		if (!user) {
 			rateLimit(key, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS);
-			return fail(401, { error: 'Incorrect email or password.' });
+			return fail(401, { error: message('login.incorrect') });
 		}
 
 		resetRateLimit(key);

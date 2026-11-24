@@ -35,5 +35,16 @@ export function groupListEntries(names: string[]): RegExp[] {
 	return names.map((name) => new RegExp(`^\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+\\d+\\s*$`));
 }
 
+function browserCookie(name: string, value: string) {
+	return { name, value, domain: '127.0.0.1', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' as const };
+}
+
+/** The tests read English text, but the app starts in French: English is picked in every test browser. */
+export const ENGLISH_COOKIE = browserCookie('locale', 'en');
+/** The cookie notice is dismissed, so it doesn't cover buttons at the bottom of the screen. */
+export const COOKIE_NOTICE_DISMISSED = browserCookie('cookie-notice', 'dismissed');
+/** What global-setup.ts puts in the shared storage state besides the session. Tests about these drop them. */
+export const PREFERENCE_COOKIES = [ENGLISH_COOKIE, COOKIE_NOTICE_DISMISSED];
+
 /** Top bar (64px) + sticky search bar (56px): group headings stick and jumps stop just below this. */
 export const LIST_STICKY_TOP = 120;

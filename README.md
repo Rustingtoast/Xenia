@@ -103,6 +103,37 @@ XENIA_SECRET=<secret> DATABASE_PATH=storage/xenia.sqlite3 PORT=3000 bun ./build
 - `XENIA_SECRET`: a long random string, e.g. `openssl rand -hex 32`. Keep it the same across restarts.
 - `DATABASE_PATH`: the SQLite file. It is created and migrated on start. Back it up by copying it.
 
+## Languages
+
+Xenia speaks Deutsch, English, Español, Français, Íslenska, Italiano, Nederlands, Norsk bokmål, Suomi,
+Русский, हिन्दी, 中文 and 日本語. It starts in **French**; the language menu (in Settings, and below the
+login and register forms) switches it. The browser remembers the last language used (`locale` cookie,
+renewed for a year on every visit).
+
+- Components translate with `t('key')` from `#lib/i18n/t.js`: `t('phonebook.count', { count: 3 })`.
+- `src/lib/i18n/messages/en.ts` is the reference: every key there must exist in every language (the type
+  checker and `mise run test` check that, including placeholders and plural forms).
+- **New text:** add a key to `en.ts`, then to every other file in `messages/`.
+- **New language:** copy a translation such as `de.ts` (not `en.ts`: it's typed differently) to
+  `<code>.ts`, rename its export to the code (`export const pt: Dictionary = …`) and translate it. Then add
+  the code to `Locale` and `LOCALE_NAMES` in `src/lib/i18n/index.ts` and to `MESSAGES` in
+  `src/lib/server/messages.ts`.
+
+Server code (form errors) sends message keys, not text: `message('login.incorrect')`, shown with `t(...)`.
+
+## Cookies
+
+Xenia's cookies are **purely functional and for convenience**: no tracking, no analytics, no advertising,
+nothing shared with anyone. So the cookie notice only informs; one click on OK hides it.
+
+| Cookie          | What it's for                                          | Kept for |
+| --------------- | ------------------------------------------------------ | -------- |
+| `session`       | Keeps you signed in (random token, `HttpOnly`)         | 30 days  |
+| `locale`        | The language last used (only once one was picked)      | 1 year, renewed on every visit |
+| `cookie-notice` | The cookie notice was dismissed: don't show it again   | 1 year   |
+
+The light/dark choice is kept in the browser's local storage (`theme`), not in a cookie.
+
 ## Project layout
 
 | Path                       | What's there                                                   |
@@ -111,6 +142,7 @@ XENIA_SECRET=<secret> DATABASE_PATH=storage/xenia.sqlite3 PORT=3000 bun ./build
 | `src/lib/components/`      | Svelte components (Group list, group sections, rows, theme toggle) |
 | `src/lib/server/`          | Server-only code: database, migrations, contact queries, undo  |
 | `src/lib/contacts.ts`      | Contact types and rules shared by server and browser           |
+| `src/lib/i18n/`            | Languages: the translation helpers and `messages/` (one file per language) |
 | `scripts/db.ts`            | The `db:*` commands and the sample contacts                    |
 | `e2e/`                     | Playwright browser tests                                       |
 | `storage/`                 | SQLite databases (git-ignored)                                 |

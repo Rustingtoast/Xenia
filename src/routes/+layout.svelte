@@ -1,14 +1,31 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
+	import CookieNotice from '#lib/components/CookieNotice.svelte';
 	import GroupList from '#lib/components/GroupList.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { GroupCount } from '#lib/contacts.js';
 	import { DOCKED_QUERY, GroupListMode } from '#lib/group-list.js';
+	import { saveLocale, savedLocale } from '#lib/i18n/cookie.js';
+	import { locale, t } from '#lib/i18n/t.js';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
+
+	// The server sets <html lang> (hooks.server.ts); this keeps it right after a change in Settings.
+	$effect(() => {
+		document.documentElement.lang = locale();
+	});
+
+	// A picked language is renewed on every visit, so the browser remembers the last one used (not only for
+	// a year after picking it). Renews the cookie's own value, never the page's: a page from the browser
+	// cache may be older than the cookie. Without a valid pick the default (French) applies; nothing to renew.
+	onMount(() => {
+		const saved = savedLocale();
+		if (saved) saveLocale(saved);
+	});
 
 	/** The signed-in user, or null. */
 	const user = $derived(page.data.user);
@@ -39,8 +56,8 @@
 		<button
 			type="button"
 			class="btn btn-square btn-ghost"
-			aria-label={groupListShown ? 'Close group list' : 'Open group list'}
-			title={groupListShown ? 'Close group list' : 'Open group list'}
+			aria-label={groupListShown ? t('groupList.close') : t('groupList.open')}
+			title={groupListShown ? t('groupList.close') : t('groupList.open')}
 			aria-controls="group-list"
 			aria-expanded={groupListShown}
 			onclick={toggleGroupList}
@@ -60,8 +77,8 @@
 				tabindex="0"
 				role="button"
 				class="btn btn-circle btn-ghost"
-				aria-label="Account"
-				title="Account"
+				aria-label={t('header.account')}
+				title={t('header.account')}
 			>
 				<svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 					stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -75,7 +92,7 @@
 			>
 				<p class="truncate px-2 py-1 text-sm text-base-content/60" title={user.email}>{user.email}</p>
 				<form method="POST" action="?/logout">
-					<button class="btn btn-ghost btn-sm w-full justify-start text-error">Log out</button>
+					<button class="btn btn-ghost btn-sm w-full justify-start text-error">{t('header.logOut')}</button>
 				</form>
 			</div>
 		</div>
@@ -91,3 +108,5 @@
 <main class="mx-auto w-full max-w-4xl px-4 py-6 md:px-6">
 	{@render children()}
 </main>
+
+<CookieNotice show={page.data.cookieNotice === true} />

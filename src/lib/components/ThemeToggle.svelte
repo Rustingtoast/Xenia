@@ -5,12 +5,15 @@
 	// - Toggling back to whatever the OS uses clears the saved choice: the page follows the OS again.
 	// The saved choice is applied before first paint by the inline script in src/app.html.
 	import { onMount } from 'svelte';
+	import { t } from '#lib/i18n/t.js';
 	import { Theme, isTheme } from '#lib/theme.js';
 
 	const STORAGE_KEY = 'theme';
 	let current = $state<Theme>(Theme.Light);
 	let mounted = $state(false);
-	const label = $derived(!mounted ? 'Toggle dark mode' : current === Theme.Dark ? 'Switch to light mode' : 'Switch to dark mode');
+	const label = $derived(
+		!mounted ? t('theme.toggle') : current === Theme.Dark ? t('theme.switchToLight') : t('theme.switchToDark')
+	);
 
 	function systemTheme(): Theme {
 		return matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light;
