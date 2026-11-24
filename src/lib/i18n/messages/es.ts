@@ -94,6 +94,10 @@ export const es: Dictionary = {
 		'Xenia solo usa cookies funcionales: una mantiene tu sesión iniciada, otra recuerda tu idioma y otra recuerda que ya has visto este aviso. Sirven únicamente para que la aplicación funcione y para tu comodidad. Sin rastreo ni publicidad.',
 	'cookies.dismiss': 'Entendido',
 
+	'error.notFound': 'Esta página no existe.',
+	'error.generic': 'Algo salió mal. Inténtalo de nuevo.',
+	'error.backHome': 'Volver a Xenia',
+
 	'auth.email': 'Correo electrónico',
 	'auth.password': 'Contraseña',
 	'login.pageTitle': 'Iniciar sesión',

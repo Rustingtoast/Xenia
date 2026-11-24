@@ -48,6 +48,18 @@ test('validation errors come in the page language', async ({ page }) => {
 	await expect(dialog.getByText('no puede estar vacío')).toHaveCount(3); // group, location, phone number
 });
 
+test('an unknown page shows the error in the page language', async ({ page }) => {
+	const response = await page.goto('/does-not-exist');
+	expect(response?.status()).toBe(404);
+	await expect(page.getByText("This page doesn't exist.")).toBeVisible();
+
+	await page.context().addCookies([{ ...ENGLISH_COOKIE, value: 'fr' }]);
+	await page.reload();
+	await expect(page.getByText('Cette page n’existe pas.')).toBeVisible();
+	await page.getByRole('link', { name: 'Retour à Xenia' }).click();
+	await expect(page.getByRole('heading', { name: 'Annuaire', level: 1 })).toBeVisible();
+});
+
 test.describe('a first visit', () => {
 	// No cookies at all: signed out, no language picked, cookie notice not dismissed.
 	test.use({ storageState: { cookies: [], origins: [] } });

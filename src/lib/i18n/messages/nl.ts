@@ -90,6 +90,10 @@ export const nl: Dictionary = {
 		'Xenia gebruikt alleen functionele cookies: één houdt je ingelogd, één onthoudt je taal en één onthoudt dat je deze melding hebt gezien. Ze zijn er alleen om de app te laten werken en voor je gemak. Geen tracking, geen advertenties.',
 	'cookies.dismiss': 'Oké',
 
+	'error.notFound': 'Deze pagina bestaat niet.',
+	'error.generic': 'Er is iets misgegaan. Probeer het opnieuw.',
+	'error.backHome': 'Terug naar Xenia',
+
 	'auth.email': 'E-mail',
 	'auth.password': 'Wachtwoord',
 	'login.pageTitle': 'Inloggen',

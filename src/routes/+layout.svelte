@@ -8,7 +8,7 @@
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { GroupCount } from '#lib/contacts.js';
 	import { DOCKED_QUERY, GroupListMode } from '#lib/group-list.js';
-	import { hasSavedLocale, saveLocale } from '#lib/i18n/cookie.js';
+	import { saveLocale, savedLocale } from '#lib/i18n/cookie.js';
 	import { locale, t } from '#lib/i18n/t.js';
 	import type { LayoutProps } from './$types';
 
@@ -20,9 +20,11 @@
 	});
 
 	// A picked language is renewed on every visit, so the browser remembers the last one used (not only for
-	// a year after picking it). Without a pick there's nothing to remember: the default (French) applies.
+	// a year after picking it). Renews the cookie's own value, never the page's: a page from the browser
+	// cache may be older than the cookie. Without a valid pick the default (French) applies; nothing to renew.
 	onMount(() => {
-		if (hasSavedLocale()) saveLocale(locale());
+		const saved = savedLocale();
+		if (saved) saveLocale(saved);
 	});
 
 	/** The signed-in user, or null. */

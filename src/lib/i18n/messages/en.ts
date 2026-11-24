@@ -104,6 +104,11 @@ export const en = {
 		'Xenia only uses functional cookies: one keeps you signed in, one remembers your language and one remembers that you have seen this notice. They are purely there for the app to work and for your convenience. No tracking, no advertising.',
 	'cookies.dismiss': 'OK',
 
+	// Error page (routes/+error.svelte)
+	'error.notFound': "This page doesn't exist.",
+	'error.generic': 'Something went wrong. Please try again.',
+	'error.backHome': 'Back to Xenia',
+
 	// Log in and register
 	'auth.email': 'Email',
 	'auth.password': 'Password',

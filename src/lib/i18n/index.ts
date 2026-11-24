@@ -16,7 +16,8 @@ export enum Locale {
 	Finnish = 'fi',
 	Russian = 'ru',
 	Hindi = 'hi',
-	Chinese = 'zh',
+	/** Simplified script: names it, so browsers pick Simplified Chinese glyphs and voices. */
+	Chinese = 'zh-Hans',
 	Japanese = 'ja'
 }
 
@@ -82,6 +83,7 @@ export function message(key: MessageKey, params?: MessageParams): Translatable {
 }
 
 const pluralRules = new Map<Locale, Intl.PluralRules>();
+const numberFormats = new Map<Locale, Intl.NumberFormat>();
 
 function pluralCategory(locale: Locale, count: number): Intl.LDMLPluralRule {
 	let rules = pluralRules.get(locale);
@@ -89,15 +91,27 @@ function pluralCategory(locale: Locale, count: number): Intl.LDMLPluralRule {
 	return rules.select(count);
 }
 
-/** The text of a message, with its {placeholders} filled in. Unknown placeholders are left as they are. */
+/** A number the way the language writes it: 1,234 (en), 1.234 (de), 1 234 (fr). */
+function formatNumber(locale: Locale, value: number): string {
+	let format = numberFormats.get(locale);
+	if (!format) numberFormats.set(locale, (format = new Intl.NumberFormat(locale)));
+	return format.format(value);
+}
+
+/**
+ * The text of a message, with its {placeholders} filled in (numbers formatted for the language).
+ * Unknown placeholders are left as they are.
+ */
 export function translate(messages: Dictionary, locale: Locale, key: MessageKey, params: MessageParams = {}): string {
 	const message: Message | undefined = messages[key];
 	if (message === undefined) return key;
 	const text =
 		typeof message === 'string' ? message : (message[pluralCategory(locale, Number(params.count ?? 0))] ?? message.other);
-	return text.replace(/\{(\w+)\}/g, (placeholder, name: string) =>
-		Object.hasOwn(params, name) ? String(params[name]) : placeholder
-	);
+	return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => {
+		if (!Object.hasOwn(params, name)) return placeholder;
+		const value = params[name];
+		return typeof value === 'number' ? formatNumber(locale, value) : value;
+	});
 }
 
 /** The {placeholder} names in a text, e.g. ["matches", "count"]. */

@@ -90,6 +90,10 @@ export const zh: Dictionary = {
 		'Xenia 仅使用功能性 Cookie：一个用于保持登录状态，一个用于记住您的语言，还有一个用于记住您已看过此提示。它们仅用于让应用正常运行并方便您使用。不跟踪，无广告。',
 	'cookies.dismiss': '知道了',
 
+	'error.notFound': '此页面不存在。',
+	'error.generic': '出了点问题，请重试。',
+	'error.backHome': '返回 Xenia',
+
 	'auth.email': '电子邮件',
 	'auth.password': '密码',
 	'login.pageTitle': '登录',

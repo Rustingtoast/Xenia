@@ -25,6 +25,7 @@ describe('resolveLocale', () => {
 	test('uses the language saved in the cookie', () => {
 		expect(resolveLocale('de')).toBe(Locale.German);
 		expect(resolveLocale('ja')).toBe(Locale.Japanese);
+		expect(resolveLocale('zh-Hans')).toBe(Locale.Chinese);
 	});
 
 	test('falls back to French without a valid choice', () => {
@@ -64,7 +65,16 @@ describe('translate', () => {
 		expect(translate(MESSAGES.ru, Locale.Russian, 'phonebook.count', { count: 21 })).toBe('21 контакт');
 		expect(translate(MESSAGES.ru, Locale.Russian, 'phonebook.count', { count: 3 })).toBe('3 контакта');
 		expect(translate(MESSAGES.ru, Locale.Russian, 'phonebook.count', { count: 11 })).toBe('11 контактов');
-		expect(translate(MESSAGES.zh, Locale.Chinese, 'phonebook.count', { count: 1 })).toBe('1 个联系人');
+		expect(translate(MESSAGES[Locale.Chinese], Locale.Chinese, 'phonebook.count', { count: 1 })).toBe('1 个联系人');
+	});
+
+	test('writes numbers the way the language does; text parameters stay as they are', () => {
+		expect(translate(en, Locale.English, 'phonebook.count', { count: 1234 })).toBe('1,234 contacts');
+		expect(translate(MESSAGES.de, Locale.German, 'phonebook.count', { count: 1234 })).toBe('1.234 Kontakte');
+		expect(translate(en, Locale.English, 'validation.tooLong', { max: 1000 })).toBe(
+			'is too long (maximum is 1,000 characters)'
+		);
+		expect(translate(en, Locale.English, 'phonebook.noMatches', { search: '1234' })).toBe('No contacts match “1234”.');
 	});
 
 	test('translates a message the server sent', () => {

@@ -96,6 +96,10 @@ export const fr: Dictionary = {
 		'Xenia utilise uniquement des cookies fonctionnels : l’un maintient votre session, un autre retient votre langue et un dernier se souvient que vous avez vu ce message. Ils servent uniquement au fonctionnement de l’application et à votre confort. Aucun pistage, aucune publicité.',
 	'cookies.dismiss': 'OK',
 
+	'error.notFound': 'Cette page n’existe pas.',
+	'error.generic': 'Une erreur s’est produite. Veuillez réessayer.',
+	'error.backHome': 'Retour à Xenia',
+
 	'auth.email': 'E-mail',
 	'auth.password': 'Mot de passe',
 	'login.pageTitle': 'Connexion',

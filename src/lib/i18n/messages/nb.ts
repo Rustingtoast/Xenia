@@ -90,6 +90,10 @@ export const nb: Dictionary = {
 		'Xenia bruker bare funksjonelle informasjonskapsler: én holder deg innlogget, én husker språket ditt, og én husker at du har sett denne meldingen. De finnes bare for at appen skal fungere og være enklere å bruke. Ingen sporing, ingen reklame.',
 	'cookies.dismiss': 'OK',
 
+	'error.notFound': 'Denne siden finnes ikke.',
+	'error.generic': 'Noe gikk galt. Prøv igjen.',
+	'error.backHome': 'Tilbake til Xenia',
+
 	'auth.email': 'E-post',
 	'auth.password': 'Passord',
 	'login.pageTitle': 'Logg inn',

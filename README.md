@@ -114,8 +114,10 @@ renewed for a year on every visit).
 - `src/lib/i18n/messages/en.ts` is the reference: every key there must exist in every language (the type
   checker and `mise run test` check that, including placeholders and plural forms).
 - **New text:** add a key to `en.ts`, then to every other file in `messages/`.
-- **New language:** copy `en.ts` to `<code>.ts`, translate it, then add the code to `Locale` and
-  `LOCALE_NAMES` in `src/lib/i18n/index.ts` and to `MESSAGES` in `src/lib/server/messages.ts`.
+- **New language:** copy a translation such as `de.ts` (not `en.ts`: it's typed differently) to
+  `<code>.ts`, rename its export to the code (`export const pt: Dictionary = …`) and translate it. Then add
+  the code to `Locale` and `LOCALE_NAMES` in `src/lib/i18n/index.ts` and to `MESSAGES` in
+  `src/lib/server/messages.ts`.
 
 Server code (form errors) sends message keys, not text: `message('login.incorrect')`, shown with `t(...)`.
 

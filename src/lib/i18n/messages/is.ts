@@ -90,6 +90,10 @@ export const is: Dictionary = {
 		'Xenia notar eingöngu nauðsynlegar vafrakökur: ein heldur innskráningunni virkri, ein man tungumálið þitt og ein man að þú hafir séð þessa tilkynningu. Þær eru eingöngu til að appið virki og til þæginda fyrir þig. Engin rakning, engar auglýsingar.',
 	'cookies.dismiss': 'Í lagi',
 
+	'error.notFound': 'Þessi síða er ekki til.',
+	'error.generic': 'Eitthvað fór úrskeiðis. Reyndu aftur.',
+	'error.backHome': 'Aftur í Xenia',
+
 	'auth.email': 'Netfang',
 	'auth.password': 'Lykilorð',
 	'login.pageTitle': 'Innskráning',

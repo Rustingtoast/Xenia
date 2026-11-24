@@ -90,6 +90,10 @@ export const fi: Dictionary = {
 		'Xenia käyttää vain toiminnallisia evästeitä: yksi pitää sinut kirjautuneena, yksi muistaa kielesi ja yksi muistaa, että olet nähnyt tämän ilmoituksen. Ne ovat olemassa vain sovelluksen toimintaa ja sinun mukavuuttasi varten. Ei seurantaa, ei mainontaa.',
 	'cookies.dismiss': 'OK',
 
+	'error.notFound': 'Tätä sivua ei ole olemassa.',
+	'error.generic': 'Jokin meni vikaan. Yritä uudelleen.',
+	'error.backHome': 'Takaisin Xeniaan',
+
 	'auth.email': 'Sähköposti',
 	'auth.password': 'Salasana',
 	'login.pageTitle': 'Kirjaudu sisään',

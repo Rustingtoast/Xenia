@@ -90,6 +90,10 @@ export const ja: Dictionary = {
 		'Xenia は機能上必要な Cookie のみを使用します。ログイン状態の維持、言語の記憶、このお知らせを表示済みであることの記憶です。アプリの動作と使いやすさのためだけに使われ、トラッキングや広告には使用しません。',
 	'cookies.dismiss': 'OK',
 
+	'error.notFound': 'このページは存在しません。',
+	'error.generic': '問題が発生しました。もう一度お試しください。',
+	'error.backHome': 'Xenia に戻る',
+
 	'auth.email': 'メールアドレス',
 	'auth.password': 'パスワード',
 	'login.pageTitle': 'ログイン',
