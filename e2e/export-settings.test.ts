@@ -19,14 +19,14 @@ test('Export opens a placeholder dialog with Excel/PDF and a save location', asy
 	await expect(dialog).toBeHidden();
 });
 
-test('Settings opens a placeholder dialog listing dark mode and language', async ({ page }) => {
+test('Settings has the language menu and lists dark mode', async ({ page }) => {
 	setContacts();
 	await page.goto('/');
 
 	await page.getByRole('complementary', { name: 'Group list' }).getByRole('button', { name: 'Settings' }).click();
 	const dialog = page.getByRole('dialog', { name: 'Settings' });
 	await expect(dialog).toContainText('Dark mode');
-	await expect(dialog).toContainText('Language');
+	await expect(dialog.getByRole('combobox', { name: 'Language' })).toHaveValue('en');
 
 	await page.keyboard.press('Escape');
 	await expect(dialog).toBeHidden();

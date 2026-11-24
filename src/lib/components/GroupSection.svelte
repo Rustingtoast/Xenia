@@ -2,6 +2,7 @@
 	// One group: sticky heading plus its contacts, lazy-loaded in chunks as the placeholder below scrolls
 	// into view. The placeholder reserves the height still to come, so the page doesn't jump.
 	import { SectionLoadState, sectionId, type Contact, type ContactChange, type SectionChunkResponse } from '#lib/contacts.js';
+	import { t } from '#lib/i18n/t.js';
 	import ContactRow from './ContactRow.svelte';
 	import Highlight from './Highlight.svelte';
 
@@ -126,10 +127,10 @@
 				class="flex h-[calc(var(--rows)*var(--contact-row-height))] items-start justify-center pt-4"
 			>
 				{#if failed}
-					<button type="button" class="btn btn-sm" onclick={loadMore}>Couldn't load contacts. Retry</button>
+					<button type="button" class="btn btn-sm" onclick={loadMore}>{t('section.loadFailed')}</button>
 				{:else}
 					<span class="loading loading-dots loading-sm text-base-content/40"></span>
-					<span class="sr-only">Loading contacts…</span>
+					<span class="sr-only">{t('section.loading')}</span>
 				{/if}
 			</div>
 		{/key}

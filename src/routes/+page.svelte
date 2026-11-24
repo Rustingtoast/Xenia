@@ -5,6 +5,7 @@
 	import { untrack, tick } from 'svelte';
 	import { ActionOutcome, SEARCH_MAX_LENGTH, groupKey, normalizeSearch, type ContactChange } from '#lib/contacts.js';
 	import { pageAction } from '#lib/forms.js';
+	import { t } from '#lib/i18n/t.js';
 	import ContactFormDialog from '#lib/components/ContactFormDialog.svelte';
 	import GroupSection from '#lib/components/GroupSection.svelte';
 	import type { PageProps } from './$types';
@@ -127,27 +128,27 @@
 </script>
 
 <svelte:head>
-	<title>Phonebook · Xenia</title>
+	<title>{t('phonebook.title')} · Xenia</title>
 </svelte:head>
 
 <div class="mx-auto max-w-xl md:max-w-none">
 	<div class="mb-2 flex items-center justify-between gap-3">
 		<div>
-			<h1 class="text-2xl font-bold">Phonebook</h1>
+			<h1 class="text-2xl font-bold">{t('phonebook.title')}</h1>
 			<p id="contact-count" class="text-sm text-base-content/60">
 				{#if data.search}
-					{data.matches} of {data.total} {data.total === 1 ? 'contact' : 'contacts'}
+					{t('phonebook.matchCount', { matches: data.matches, count: data.total })}
 				{:else}
-					{data.total} {data.total === 1 ? 'contact' : 'contacts'}
+					{t('phonebook.count', { count: data.total })}
 				{/if}
 			</p>
 		</div>
-		<button type="button" class="btn btn-primary" onclick={() => newContactDialog.open()}>+ New</button>
+		<button type="button" class="btn btn-primary" onclick={() => newContactDialog.open()}>{t('phonebook.new')}</button>
 	</div>
 
 	{#if notice?.outcome === ActionOutcome.Deleted}
 		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
-			<span>Contact deleted.</span>
+			<span>{t('notice.deleted')}</span>
 			<form
 				method="POST"
 				action={pageAction(page.url, 'restore')}
@@ -176,22 +177,22 @@
 				}}
 			>
 				<input type="hidden" name="token" value={notice.undoToken} />
-				<button class="btn btn-sm btn-success" disabled={restoring}>Undo</button>
+				<button class="btn btn-sm btn-success" disabled={restoring}>{t('notice.undo')}</button>
 			</form>
 		</div>
 	{:else if notice?.outcome === ActionOutcome.Restored}
-		<div role="status" class="mb-4 alert alert-soft alert-success">Contact restored.</div>
+		<div role="status" class="mb-4 alert alert-soft alert-success">{t('notice.restored')}</div>
 	{:else if notice?.outcome === ActionOutcome.RestoreFailed}
-		<div role="alert" class="mb-4 alert alert-soft alert-warning">This contact can no longer be restored.</div>
+		<div role="alert" class="mb-4 alert alert-soft alert-warning">{t('notice.restoreFailed')}</div>
 	{:else if notice?.outcome === ActionOutcome.Created}
 		<div role="status" class="mb-4 alert flex items-center justify-between alert-soft alert-success">
-			<span>Contact added.</span>
+			<span>{t('notice.created')}</span>
 			{#if created}
-				<button class="btn btn-sm btn-success" onclick={viewCreated}>View</button>
+				<button class="btn btn-sm btn-success" onclick={viewCreated}>{t('notice.view')}</button>
 			{/if}
 		</div>
 	{:else if notice?.outcome === ActionOutcome.Updated}
-		<div role="status" class="mb-4 alert alert-soft alert-success">Contact saved.</div>
+		<div role="status" class="mb-4 alert alert-soft alert-success">{t('notice.updated')}</div>
 	{/if}
 
 	<!-- Searches group, location, phone (separator-insensitive) and description. -->
@@ -206,8 +207,8 @@
 				bind:this={searchInput}
 				bind:value={searchText}
 				type="search"
-				placeholder="Search contacts"
-				aria-label="Search contacts"
+				placeholder={t('phonebook.search')}
+				aria-label={t('phonebook.search')}
 				maxlength={SEARCH_MAX_LENGTH}
 				autocomplete="off"
 				oninput={searchLater}
@@ -220,7 +221,7 @@
 				}}
 			/>
 			{#if searchText}
-				<button type="button" class="btn btn-circle btn-ghost btn-xs" aria-label="Clear search" onclick={clearSearch}>
+				<button type="button" class="btn btn-circle btn-ghost btn-xs" aria-label={t('phonebook.clearSearch')} onclick={clearSearch}>
 					<svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
 						stroke-width="2" stroke-linecap="round" aria-hidden="true">
 						<path d="M6 6l12 12M18 6L6 18"></path>
@@ -233,17 +234,18 @@
 	<!-- Bound for showFirstResults to measure. -->
 	<div bind:this={results}>
 		{#if data.total === 0}
-			<div class="rounded-box bg-base-100 p-10 text-center text-base-content/60 shadow-sm">No contacts yet.</div>
+			<div class="rounded-box bg-base-100 p-10 text-center text-base-content/60 shadow-sm">{t('phonebook.empty')}</div>
 		{:else if data.groups.length === 0}
 			<div class="rounded-box bg-base-100 p-10 text-center shadow-sm">
-				<p class="text-base-content/60">No contacts match “{data.search}”.</p>
-				<button type="button" class="btn mt-4 btn-sm" onclick={clearSearch}>Clear search</button>
+				<p class="text-base-content/60">{t('phonebook.noMatches', { search: data.search })}</p>
+				<button type="button" class="btn mt-4 btn-sm" onclick={clearSearch}>{t('phonebook.clearSearch')}</button>
 			</div>
 		{:else}
 			<!-- No overflow clipping: row menus must stick out. -->
 			<div class="rounded-box bg-base-100 shadow-sm">
 				<div class="hidden grid-cols-[1fr_1fr_minmax(11rem,1fr)_1.5fr_2rem] gap-4 border-b border-base-content/10 px-4 py-3 text-sm font-semibold text-base-content/60 md:grid">
-					<span>Group</span><span>Location</span><span>Phone number</span><span>Description</span><span class="sr-only">Options</span>
+					<span>{t('field.group')}</span><span>{t('field.location')}</span><span>{t('field.phoneNumber')}</span
+					><span>{t('field.description')}</span><span class="sr-only">{t('phonebook.options')}</span>
 				</div>
 
 				<!-- Keyed on group and search: a new search gets fresh sections that load only matching contacts. -->

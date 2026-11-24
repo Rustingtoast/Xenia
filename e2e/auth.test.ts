@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { TEST_USER_EMAIL, TEST_USER_PASSWORD } from './auth-constants.ts';
+import { PREFERENCE_COOKIES } from './support.ts';
 
-// The login/register pages are only reachable signed out, so these tests drop the shared session.
-test.use({ storageState: { cookies: [], origins: [] } });
+// The login/register pages are only reachable signed out, so these tests drop the shared session
+// (but keep English picked and the cookie notice dismissed).
+test.use({ storageState: { cookies: PREFERENCE_COOKIES, origins: [] } });
 
 test('an unauthenticated visitor is sent to the login page', async ({ page }) => {
 	await page.goto('/');

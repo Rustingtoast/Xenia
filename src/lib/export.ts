@@ -4,6 +4,7 @@ export enum ExportFormat {
 	Pdf = 'pdf'
 }
 
+// Product names and extensions: the same in every language, so not translated.
 export const EXPORT_FORMAT_LABELS: Record<ExportFormat, string> = {
 	[ExportFormat.Excel]: 'Excel (.xlsx)',
 	[ExportFormat.Pdf]: 'PDF (.pdf)'

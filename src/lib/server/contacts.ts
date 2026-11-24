@@ -9,15 +9,18 @@ import {
 	type Contact,
 	type GroupCount
 } from '../contacts.js';
+import { message, type Translatable } from '../i18n/index.js';
 
 /** What a user enters for a contact. */
 export type ContactInput = { groupName: string; location: string; phoneNumber: string; description?: string };
 
 /** Longest allowed description (characters). */
 export const DESCRIPTION_MAX_LENGTH = 1000;
+/** Fewest digits a phone number needs. */
+export const PHONE_MIN_DIGITS = 3;
 
-/** Field → error messages. Empty when valid. */
-export type ValidationErrors = Partial<Record<keyof ContactInput, string[]>>;
+/** Field → error messages (shown in the reader's language by the form). Empty when valid. */
+export type ValidationErrors = Partial<Record<keyof ContactInput, Translatable[]>>;
 
 export class ContactValidationError extends Error {
 	constructor(readonly errors: ValidationErrors) {
@@ -116,21 +119,23 @@ export function validateContact(input: ContactInput): { values: Required<Contact
 		description: (input.description ?? '').trim()
 	};
 	const errors: ValidationErrors = {};
-	const add = (field: keyof ContactInput, message: string) => (errors[field] ??= []).push(message);
+	const add = (field: keyof ContactInput, error: Translatable) => (errors[field] ??= []).push(error);
 
 	for (const field of ['groupName', 'location'] as const) {
-		if (!values[field]) add(field, "can't be blank");
-		else if (values[field].length > 100) add(field, 'is too long (maximum is 100 characters)');
+		if (!values[field]) add(field, message('validation.blank'));
+		else if (values[field].length > 100) add(field, message('validation.tooLong', { max: 100 }));
 	}
 	const phone = values.phoneNumber;
-	if (!phone) add('phoneNumber', "can't be blank");
+	if (!phone) add('phoneNumber', message('validation.blank'));
 	else {
-		if (phone.length > 30) add('phoneNumber', 'is too long (maximum is 30 characters)');
-		if (!PHONE_FORMAT.test(phone)) add('phoneNumber', 'may only contain digits, spaces, + ( ) . / -');
-		if ((phone.match(/[0-9]/g) ?? []).length < 3) add('phoneNumber', 'must contain at least 3 digits');
+		if (phone.length > 30) add('phoneNumber', message('validation.tooLong', { max: 30 }));
+		if (!PHONE_FORMAT.test(phone)) add('phoneNumber', message('validation.phoneCharacters'));
+		if ((phone.match(/[0-9]/g) ?? []).length < PHONE_MIN_DIGITS) {
+			add('phoneNumber', message('validation.phoneDigits', { min: PHONE_MIN_DIGITS }));
+		}
 	}
 	if (values.description.length > DESCRIPTION_MAX_LENGTH) {
-		add('description', `is too long (maximum is ${DESCRIPTION_MAX_LENGTH} characters)`);
+		add('description', message('validation.tooLong', { max: DESCRIPTION_MAX_LENGTH }));
 	}
 	return { values, errors };
 }

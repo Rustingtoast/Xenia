@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { ContactField, CONTACT_FIELD_LABELS } from '../src/lib/contact-fields.ts';
+import { Locale, translate } from '../src/lib/i18n/index.ts';
+import { en } from '../src/lib/i18n/messages/en.ts';
 import { STANDARD_CONTACTS, rowField, rowSelector, setContacts } from './support.ts';
 
 const LONG_DESCRIPTION =
@@ -28,7 +30,8 @@ for (const [screen, viewport] of [
 		await expect(dialog).toBeVisible();
 		await expect(dialog.getByRole('button', { name: 'Close' })).toBeFocused();
 		for (const field of Object.values(ContactField)) {
-			await expect(dialog.getByText(CONTACT_FIELD_LABELS[field], { exact: true })).toBeVisible();
+			const label = translate(en, Locale.English, CONTACT_FIELD_LABELS[field]);
+			await expect(dialog.getByText(label, { exact: true })).toBeVisible();
 		}
 		await expect(dialog.locator(`[data-field="${ContactField.Location}"]`)).toHaveText('Zurich');
 		await expect(dialog.locator(`[data-field="${ContactField.Group}"]`)).toHaveText('Doctors');

@@ -11,6 +11,7 @@ import {
 } from '#lib/server/auth.js';
 import { getDb } from '#lib/server/db.js';
 import { isRateLimited, rateLimit } from '#lib/server/rate-limit.js';
+import { message, type Translatable } from '#lib/i18n/index.js';
 import type { Actions, PageServerLoad } from './$types';
 
 const REGISTER_ATTEMPT_LIMIT = 5; // registrations per IP
@@ -20,7 +21,8 @@ export const load: PageServerLoad = ({ locals }) => {
 	if (locals.user) redirect(307, '/');
 };
 
-type RegisterErrors = { email?: string; password?: string; confirm?: string };
+// Messages, not text: the page shows them in the reader's language.
+type RegisterErrors = { email?: Translatable; password?: Translatable; confirm?: Translatable };
 
 export const actions: Actions = {
 	default: async ({ request, url, locals, cookies, getClientAddress }) => {
@@ -31,21 +33,21 @@ export const actions: Actions = {
 		const confirm = String(data.get('confirm') ?? '');
 
 		const errors: RegisterErrors = {};
-		if (!isValidEmail(email)) errors.email = 'Enter a valid email address.';
-		else if (findUserByEmail(getDb(), email)) errors.email = 'That email is already registered.';
-		if (!isValidPassword(password)) errors.password = `Use at least ${PASSWORD_MIN_LENGTH} characters.`;
-		if (password !== confirm) errors.confirm = 'Passwords do not match.';
+		if (!isValidEmail(email)) errors.email = message('register.invalidEmail');
+		else if (findUserByEmail(getDb(), email)) errors.email = message('register.emailTaken');
+		if (!isValidPassword(password)) errors.password = message('register.passwordTooShort', { min: PASSWORD_MIN_LENGTH });
+		if (password !== confirm) errors.confirm = message('register.passwordMismatch');
 		if (Object.keys(errors).length > 0) return fail(400, { errors, email });
 
 		const key = `register:${getClientAddress()}`;
 		if (isRateLimited(key, REGISTER_ATTEMPT_LIMIT, REGISTER_WINDOW_MS)) {
-			errors.email = 'Too many registrations. Try again later.';
+			errors.email = message('register.tooMany');
 			return fail(429, { errors, email });
 		}
 
 		const user = await createUser(getDb(), email, password);
 		if (!user) {
-			errors.email = 'That email is already registered.';
+			errors.email = message('register.emailTaken');
 			return fail(400, { errors, email });
 		}
 

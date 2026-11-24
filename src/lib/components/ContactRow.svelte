@@ -5,6 +5,7 @@
 	import { page } from '$app/state';
 	import type { Contact, ContactChange } from '#lib/contacts.js';
 	import { pageAction } from '#lib/forms.js';
+	import { t } from '#lib/i18n/t.js';
 	import ContactDetailsDialog from './ContactDetailsDialog.svelte';
 	import ContactFormDialog from './ContactFormDialog.svelte';
 	import Highlight from './Highlight.svelte';
@@ -95,10 +96,13 @@
 				contact.description ? 'text-base-content/55' : 'text-base-content/35 italic'
 			]}
 			aria-haspopup="dialog"
-			aria-label="Details for {contact.phoneNumber}: {contact.description || 'No description'}"
-			title="Show all details"
+			aria-label={t('contact.detailsFor', {
+				phoneNumber: contact.phoneNumber,
+				description: contact.description || t('contact.noDescription')
+			})}
+			title={t('contact.showDetails')}
 			onclick={() => detailsDialog.open()}
-			>{#if contact.description}<Highlight text={contact.description} {search} />{:else}No description{/if}</button
+			>{#if contact.description}<Highlight text={contact.description} {search} />{:else}{t('contact.noDescription')}{/if}</button
 		>
 	</div>
 
@@ -108,8 +112,8 @@
 			tabindex="0"
 			role="button"
 			class="btn btn-square btn-ghost btn-sm"
-			aria-label="Options for {contact.phoneNumber}"
-			title="Options"
+			aria-label={t('contact.optionsFor', { phoneNumber: contact.phoneNumber })}
+			title={t('phonebook.options')}
 			onfocus={placeMenu}
 		>
 			<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -127,7 +131,7 @@
 						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
 					</svg>
-					Edit
+					{t('common.edit')}
 				</button>
 			</li>
 			<li>
@@ -136,7 +140,7 @@
 						stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path>
 					</svg>
-					Delete
+					{t('common.delete')}
 				</button>
 			</li>
 		</ul>
@@ -145,15 +149,15 @@
 	<!-- Bottom sheet on phones, centered dialog on larger screens. -->
 	<dialog bind:this={dialog} class="modal modal-bottom sm:modal-middle" aria-labelledby="contact_{contact.id}_delete_title">
 		<div class="modal-box">
-			<h3 id="contact_{contact.id}_delete_title" class="text-lg font-bold">Delete this contact?</h3>
+			<h3 id="contact_{contact.id}_delete_title" class="text-lg font-bold">{t('contact.deleteTitle')}</h3>
 			<p class="py-4">
 				<span class="font-medium">{contact.phoneNumber}</span>
 				<span class="text-base-content/60">· {contact.groupName} · {contact.location}</span>
 				<br />
-				<span class="text-sm text-base-content/60">This can't be undone.</span>
+				<span class="text-sm text-base-content/60">{t('contact.deleteWarning')}</span>
 			</p>
 			<div class="modal-action">
-				<form method="dialog"><button class="btn">Cancel</button></form>
+				<form method="dialog"><button class="btn">{t('common.cancel')}</button></form>
 				<form
 					method="POST"
 					action={pageAction(page.url, 'delete')}
@@ -168,12 +172,12 @@
 						}}
 				>
 					<input type="hidden" name="id" value={contact.id} />
-					<button class="btn btn-error">Delete</button>
+					<button class="btn btn-error">{t('common.delete')}</button>
 				</form>
 			</div>
 		</div>
 		<!-- Clicking beside the dialog closes it (mouse/touch only; keyboard users have Esc and the visible button). -->
-		<form method="dialog" class="modal-backdrop"><button tabindex="-1" aria-hidden="true">Close</button></form>
+		<form method="dialog" class="modal-backdrop"><button tabindex="-1" aria-hidden="true">{t('common.close')}</button></form>
 	</dialog>
 
 	<ContactDetailsDialog bind:this={detailsDialog} {contact} {search} onedit={editFromDetails} />

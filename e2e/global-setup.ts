@@ -3,6 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { E2E_DATABASE_PATH } from '../playwright.config.ts';
+import { PREFERENCE_COOKIES } from './support.ts';
 
 const STORAGE_STATE = 'test-results/storage-state.json';
 
@@ -23,7 +24,8 @@ export default function globalSetup() {
 				httpOnly: true,
 				secure: false,
 				sameSite: 'Lax'
-			}
+			},
+			...PREFERENCE_COOKIES
 		],
 		origins: []
 	};
