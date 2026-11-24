@@ -8,7 +8,8 @@ import type { RequestHandler } from './$types';
 // GET /contacts/group?name=Family&after=…     the chunk after a list position
 // GET /contacts/group?name=Family&q=bern      only contacts matching "bern"
 // (name is a query parameter, not a path segment: group names may contain "/".)
-export const GET: RequestHandler = ({ url }) => {
+export const GET: RequestHandler = ({ url, locals }) => {
+	if (!locals.user) error(401, 'Not signed in');
 	const groupName = url.searchParams.get('name');
 	if (!groupName) error(400, 'Missing group name');
 
@@ -16,9 +17,8 @@ export const GET: RequestHandler = ({ url }) => {
 	const after = afterParam ? decodeListPosition(afterParam) : undefined;
 	if (after === null) error(400, 'Invalid list position');
 
-	// Once accounts exist, this must only return the signed-in user's contacts.
 	const search = url.searchParams.get('q') ?? '';
-	const { contacts, more, remaining } = sectionChunk(getDb(), groupName, after, undefined, search);
+	const { contacts, more, remaining } = sectionChunk(getDb(), locals.user.id, groupName, after, undefined, search);
 	const body: SectionChunkResponse = {
 		contacts,
 		next: more ? encodeListPosition(listPosition(contacts.at(-1)!)) : null,

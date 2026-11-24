@@ -1,7 +1,7 @@
 <script lang="ts">
 	// One group: sticky heading plus its contacts, lazy-loaded in chunks as the placeholder below scrolls
 	// into view. The placeholder reserves the height still to come, so the page doesn't jump.
-	import { SectionLoadState, sectionId, type Contact, type SectionChunkResponse } from '#lib/contacts.js';
+	import { SectionLoadState, sectionId, type Contact, type ContactChange, type SectionChunkResponse } from '#lib/contacts.js';
 	import ContactRow from './ContactRow.svelte';
 	import Highlight from './Highlight.svelte';
 
@@ -11,8 +11,15 @@
 		name,
 		count,
 		first = false,
-		search = ''
-	}: { name: string; count: number; first?: boolean; search?: string } = $props();
+		search = '',
+		onchanged
+	}: {
+		name: string;
+		count: number;
+		first?: boolean;
+		search?: string;
+		onchanged: (change: ContactChange) => void;
+	} = $props();
 
 	let contacts = $state<Contact[]>([]);
 	let loadState = $state<SectionLoadState>(SectionLoadState.NotStarted);
@@ -106,7 +113,7 @@
 	</h2>
 	<ul>
 		{#each contacts as contact (contact.id)}
-			<ContactRow bind:this={rows[contact.id]} {contact} {search} ondeleted={remove} />
+			<ContactRow bind:this={rows[contact.id]} {contact} {search} {onchanged} ondeleted={remove} />
 		{/each}
 	</ul>
 	{#if loadState !== SectionLoadState.Complete}
