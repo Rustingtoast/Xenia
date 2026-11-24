@@ -3,15 +3,78 @@ Flexible Phone Book Server.
 
 A web app usable from both desktop and phone browsers.
 
-## Stack
+## Install
+
+On macOS or Linux (also a Raspberry Pi with 64-bit OS), one line installs Xenia as a server in your home
+folder and starts it, now and whenever the computer starts:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Rustingtoast/Xenia/main/scripts/get.sh | bash
+```
+
+At the end it prints the address to open: the computer's network name, e.g. `http://devboard.local:3000` for a Pi
+called devboard (or its IP, if it doesn't announce a name). Register the first account there.
+Run the same line again to **update**: your settings, contacts and the options below stay (no need to repeat
+them). The new version is built while the old one keeps running; if its database update fails, the old one
+runs on.
+
+Options go after `bash -s --`, e.g. `curl -fsSL …/scripts/get.sh | bash -s -- --port 8080`:
+
+| Option                               | What it does                                                          |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `--port 8080`                        | Another port (default 3000)                                           |
+| `--origin http://phonebook.lan:3000` | The address people open, if not `http://<name>.local:<port>`          |
+| `--no-autostart`                     | No automatic start: run `~/xenia/scripts/start.sh` yourself           |
+| `--autostart`                        | The automatic start again                                             |
+| `--dir ~/apps/xenia`                 | Another folder than `~/xenia`                                         |
+
+What goes where:
+
+- `~/xenia`: the app. `~/xenia/storage/xenia.sqlite3`: your contacts (back them up by copying the file).
+  `~/xenia/storage/server.env`: the settings, including a random secret (keep it private).
+- Bun, through [mise](https://mise.jdx.dev) (installed into `~/.local/bin` if you don't have it).
+- The automatic start. **Linux:** a systemd user service `xenia` (logs: `journalctl --user -u xenia -f`); it
+  starts with the computer if your user may "linger", otherwise the installer prints the one `sudo` command
+  for that. **macOS:** a launch agent that starts when you log in (log: `~/xenia/storage/xenia.log`).
+
+Xenia accepts form posts (log in, save, delete) only from the address in `server.env`, so always open that
+one, also on the computer itself. The `.local` name works on most devices (some Android phones don't support it:
+use the IP there with `--origin http://<IP>:3000`). If Xenia uses the IP and it changes, give the computer a fixed
+one in your router, or run the install line again with `--origin`.
+
+To stop or uninstall:
+
+```sh
+systemctl --user disable --now xenia                                    # Linux: stop, and not at the next start
+launchctl bootout gui/$(id -u)/io.github.rustingtoast.xenia             # macOS: stop until the next login
+rm -rf ~/xenia ~/.config/xenia                                          # uninstall: deletes your contacts too!
+rm ~/.config/systemd/user/xenia.service                                 # Linux, after the line above
+rm ~/Library/LaunchAgents/io.github.rustingtoast.xenia.plist            # macOS, after the line above
+```
+
+### Without the installer
+
+```sh
+XENIA_ORIGIN=http://<host>:3000 bun run build   # once per release
+XENIA_SECRET=<secret> DATABASE_PATH=storage/xenia.sqlite3 PORT=3000 bun ./build
+```
+
+- `XENIA_ORIGIN` (build time): the URL people open the app at. Needed for plain `http://`, otherwise
+  form posts (delete, undo) are rejected as cross-site.
+- `XENIA_SECRET`: a long random string, e.g. `openssl rand -hex 32`. Keep it the same across restarts.
+- `DATABASE_PATH`: the SQLite file. It is created and migrated on start. Back it up by copying it.
+
+## Set up the project (development)
+
+To work on Xenia itself. The one-line install above is for running it.
+
+### Stack
 
 - [Bun](https://bun.sh) 1.4 (runtime, package manager, unit tests), managed with [mise](https://mise.jdx.dev)
 - [SvelteKit](https://svelte.dev/docs/kit) 3 with Svelte 5, TypeScript, built as a standalone Bun server (`@sveltejs/adapter-bun`)
 - SQLite through Bun's built-in `bun:sqlite` (plain SQL, migrations in `src/lib/server/migrations.ts`)
 - Tailwind CSS v4 + [daisyUI](https://daisyui.com) 5, mobile-first (unprefixed classes = phone, `md:`/`lg:` = larger screens)
 - Playwright for browser tests, in headless Firefox
-
-## Getting started
 
 ### Quick way: one script
 
@@ -21,20 +84,23 @@ and a dev database with sample contacts. Safe to run again.
 ```sh
 git clone https://github.com/Rustingtoast/Xenia.git
 cd Xenia
-scripts/install.sh                    # add --no-sample-data for an empty database (real installations)
+scripts/install.sh                    # add --no-sample-data for an empty database
                                       # add --with-browsers to also get Firefox for the browser tests
 mise run dev                          # http://localhost:5173
 ```
 
 Or do the same by hand:
 
-### 1. Install mise
+#### 1. Install mise
 
 mise installs the right Bun version for this project automatically.
 
 ```sh
 # macOS (Homebrew)
 brew install mise
+
+# Arch Linux
+sudo pacman -S mise
 
 # macOS / Linux (installer script)
 curl https://mise.run | sh
@@ -52,7 +118,7 @@ echo 'eval "$(mise activate bash)"' >> ~/.bashrc
 
 Other shells and Windows: see the [mise getting started guide](https://mise.jdx.dev/getting-started.html).
 
-### 2. Clone and set up the project
+#### 2. Clone and set up the project
 
 ```sh
 git clone https://github.com/Rustingtoast/Xenia.git
@@ -66,7 +132,7 @@ mise run dev        # http://localhost:5173
 The sample contacts belong to a demo account: sign in with **`demo@xenia.local`** / **`demo-password`**
 (or register your own — each account has its own phone book).
 
-## Everyday commands
+### Everyday commands
 
 | Command                | What it does                                                          |
 | ---------------------- | --------------------------------------------------------------------- |
@@ -90,18 +156,6 @@ The first `mise run test:e2e` needs Playwright's Firefox: `bunx playwright insta
 Run `mise run dev:lan`, find your computer's local IP
 (macOS: `ipconfig getifaddr en0`, Linux: `hostname -I`) and open
 `http://<that-ip>:5173` in the phone's browser. Both devices must be on the same network.
-
-## Running in production
-
-```sh
-XENIA_ORIGIN=http://<host>:3000 bun run build   # once per release
-XENIA_SECRET=<secret> DATABASE_PATH=storage/xenia.sqlite3 PORT=3000 bun ./build
-```
-
-- `XENIA_ORIGIN` (build time): the URL people open the app at. Needed for plain `http://`, otherwise
-  form posts (delete, undo) are rejected as cross-site.
-- `XENIA_SECRET`: a long random string, e.g. `openssl rand -hex 32`. Keep it the same across restarts.
-- `DATABASE_PATH`: the SQLite file. It is created and migrated on start. Back it up by copying it.
 
 ## Languages
 
@@ -144,5 +198,8 @@ The light/dark choice is kept in the browser's local storage (`theme`), not in a
 | `src/lib/contacts.ts`      | Contact types and rules shared by server and browser           |
 | `src/lib/i18n/`            | Languages: the translation helpers and `messages/` (one file per language) |
 | `scripts/db.ts`            | The `db:*` commands and the sample contacts                    |
+| `scripts/get.sh`           | The one-line install: downloads into `~/xenia`, then runs `install.sh --server` |
+| `scripts/install.sh`       | Sets up development (default) or a server (`--server`), see `--help` |
+| `scripts/start.sh`         | Starts the installed server; the automatic start runs it       |
 | `e2e/`                     | Playwright browser tests                                       |
 | `storage/`                 | SQLite databases (git-ignored)                                 |

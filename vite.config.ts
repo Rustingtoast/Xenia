@@ -12,8 +12,9 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			// Builds a standalone Bun server into build/ (run with `bun ./build`).
-			adapter: adapter({ out: 'build' }),
+			// Builds a standalone Bun server into build/ (run with `bun ./build`). The server installer builds
+			// updates next to it (XENIA_BUILD_DIR=build.new) while the old version keeps running.
+			adapter: adapter({ out: process.env.XENIA_BUILD_DIR || 'build' }),
 			paths: {
 				// The public URL the app is reached at, e.g. http://192.168.2.20:3000. Needed for plain-HTTP
 				// deployments: without it SvelteKit assumes https and rejects form posts as cross-site (CSRF).

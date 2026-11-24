@@ -3,6 +3,9 @@ node_modules
 # Output
 /.svelte-kit
 /build
+# The server installer's next and previous build (scripts/install.sh --server)
+/build.new
+/build.old
 
 # SQLite databases (dev, e2e) and their WAL/SHM files
 /storage/*
